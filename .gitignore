@@ -11,5 +11,5 @@ jqxslider.js
 --fail
 --location
 
-node_modules
+node_modules/*
 
