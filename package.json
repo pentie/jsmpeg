@@ -1,0 +1,14 @@
+{
+  "name": "multi-relays",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huangqiheng/jsmpeg.git"
+  },
+  "dependencies": {
+    "fluent-ffmpeg": "latest",
+    "safe-buffer": "latest",
+    "ultron": "latest",
+    "ws": "latest"
+  }
+}

@@ -1,0 +1,10 @@
+*.swp
+*.swo
+config.sh
+temp/
+\'
+
+jquery-1.11.1.min.js
+jqxcore.js
+jqxslider.js
+
