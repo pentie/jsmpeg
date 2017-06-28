@@ -9,14 +9,34 @@
 		}
 	</style>
 	
+	<script type="text/javascript" src="jsmpeg.min.js"></script>
 </head>
 <body>
 	<canvas id="video-canvas"></canvas>
-	<script type="text/javascript" src="jsmpeg.min.js"></script>
+	<br>
+	<a href="index.html?chan=8181" class="button">640x480-l</a>
+	<a href="index.html?chan=8182" class="button">640x480-h</a>
+	<a href="index.html?chan=8183" class="button">800x600-l</a>
+	<a href="index.html?chan=8184" class="button">800x600-h</a>
+	<a href="index.html?chan=8185" class="button">1024x768-l</a>
+	<a href="index.html?chan=8186" class="button">1024x768-h</a>
+
+
 	<script type="text/javascript">
+		var channel= get_url_param('chan', '8182');
 		var canvas = document.getElementById('video-canvas');
-		var url = 'ws://'+document.location.hostname+':8182/';
+		var url = 'ws://'+document.location.hostname+':'+channel+'/';
 		var player = new JSMpeg.Player(url, {canvas: canvas});
+
+		function get_url_param(name, def, url) {
+		    if (!url) url = window.location.href;
+		    name = name.replace(/[\[\]]/g, "\\$&");
+		    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			results = regex.exec(url);
+		    if (!results) return def;
+		    if (!results[2]) return def;
+		    return decodeURIComponent(results[2].replace(/\+/g, " "));
+		}
 	</script>
 </body>
 </html>
