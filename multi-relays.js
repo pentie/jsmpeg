@@ -12,7 +12,7 @@ var hub_8184 = ws_hub(8184, '800x600', 5);
 var hub_8185 = ws_hub(8185, '1024x768', 12);
 var hub_8186 = ws_hub(8186, '1024x768', 5);
 
-ffmpeg_src('http://localhost:8083/?action=stream', function(data){
+ffmpeg_src(input_src(), function(data){
 	hub_8181.write(data);
 	hub_8182.write(data);
 	hub_8183.write(data);
@@ -24,9 +24,27 @@ ffmpeg_src('http://localhost:8083/?action=stream', function(data){
 httpServer.createServer().listen(8080);
 
 
-/*******************************************************************/
 /*-----------------------------------------------------------------*/
-/*******************************************************************/
+
+function input_src()
+{
+	let input_src = 'http://localhost:8083/?action=stream';
+
+	if (process.argv.length > 2) {
+		let src = process.argv[2];
+
+		if (src == 'local') {
+			input_src = '/dev/video0';
+		} else
+		if (src.match(/\/dev\/video/)) {
+			input_src = src;
+		}
+	} else {
+		input_src = '/dev/video0';
+	}
+
+	return input_src;
+}
 
 function ffmpeg_src(input, callback)
 {
@@ -38,8 +56,16 @@ function ffmpeg_src(input, callback)
 		console.log('src passthrough error occurred: ' + err.message);
 	});
 
+	let input_opts;
+	if (input.match(/http:\/\//)) {
+		input_opts = [];
+	} else {
+		input_opts = ['-f v4l2', '-input_format mjpeg'];
+	}
+
 	let command = ffmpeg()
 		.input(input)
+		.inputOptions(input_opts)
 		.output(recv_stream)
 		.outputOptions(['-f mjpeg', '-c:v copy'])
 
