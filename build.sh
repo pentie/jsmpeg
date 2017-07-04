@@ -1,4 +1,7 @@
 #!/bin/sh
+
+# npm install uglify-js -g
+
 uglifyjs \
 	src/jsmpeg.js \
 	src/video-element.js \
