@@ -13,8 +13,11 @@ main()
 			log 'mjpg_streamer is running' 
 		else
 			local MJPG_WWW=/usr/local/share/mjpg-streamer/www
+			local src_size='1024x768'
 			export LD_LIBRARY_PATH=/usr/local/lib/mjpg-streamer
+
 			mjpg_streamer -i "input_uvc.so -n -r ${src_size}" -o "output_http.so -p 8083 -w ${MJPG_WWW}" &
+
 			log 'mjpg_streamer was started' 
 		fi
 
