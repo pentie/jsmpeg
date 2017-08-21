@@ -5,6 +5,7 @@
     "type": "git",
     "url": "git+https://github.com/huangqiheng/jsmpeg.git"
   },
+  "license": "MIT",
   "dependencies": {
     "fluent-ffmpeg": "latest",
     "http-server": "^0.10.0",

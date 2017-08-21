@@ -38,10 +38,12 @@ main()
 
 	npm install
 
-	if cmd_exists ffmpeg; then 
+	if ! cmd_exists ffmpeg; then 
 		echo "you must manual install ffmpeg, don't forget gpu support"
 		exit 1
 	fi
+
+	 node multi-relays.js $1
 
 	runs "$@"
 }

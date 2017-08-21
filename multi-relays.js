@@ -1,5 +1,6 @@
 const 	fs = require('fs'),
 	http = require('http'),
+	net = require('net'),
 	WebSocket = require('ws'),
 	httpServer = require('http-server'),
 	PassThroughStream = require('stream').PassThrough,
@@ -28,22 +29,27 @@ httpServer.createServer().listen(8080);
 
 function input_src()
 {
-	let input_src = 'http://localhost:8083/?action=stream';
-
 	if (process.argv.length > 2) {
 		let src = process.argv[2];
 
 		if (src == 'local') {
-			input_src = '/dev/video0';
-		} else
-		if (src.match(/\/dev\/video/)) {
-			input_src = src;
+			return '/dev/video0';
 		}
-	} else {
-		input_src = '/dev/video0';
+
+		if (src.match(/\/dev\/video/)) {
+			return src;
+		} 
+
+		if (src.match(/^http:\/\//)) {
+			return src;
+		}
+		
+		if (net.isIP(src)) {
+			return 'http://'+src+':8083/?action=stream';
+		}
 	}
 
-	return input_src;
+	return '/dev/video0';
 }
 
 function ffmpeg_src(input, callback)
