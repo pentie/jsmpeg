@@ -131,6 +131,7 @@ function ws_hub(port, size, qscale)
 
 	let command = ffmpeg()
 		.input(input_stream)
+		//.inputOptions(['-c:v mjpeg_cuvid'])
 		.output(output_stream)
 		.outputOptions(['-f mpegts', '-c:v mpeg1video', '-q:v '+qscale, '-bf 0', '-s '+size])
 
