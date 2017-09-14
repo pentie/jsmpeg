@@ -1,10 +1,9 @@
-const 	
-	argv = require('minimist')(process.argv.slice(2)),
-	http = require('http'),
-	net = require('net'),
-	WebSocket = require('ws'),
-	protobuf = require("protobufjs"),
-	crc32 = require('js-crc').crc32;
+argv = require('minimist')(process.argv.slice(2)),
+http = require('http'),
+net = require('net'),
+WebSocket = require('ws'),
+protobuf = require("protobufjs"),
+crc32 = require('js-crc').crc32;
 
 JSMpeg = {
 	Player: null,
@@ -46,12 +45,12 @@ var Crc_Player = function(url, options) {
 		return;
 	}
 
-	this.options.decodeFirstFrame = options.decodeFirstFrame !== false;
+	this.options.decodeFirstFrame = true;
 	this.options.streaming = true;
-	this.loop = options.loop !== false;
+	this.loop = true;
 
-	this.source = new JSMpeg.Source.WebSocket(url, options);
-	this.demuxer = new JSMpeg.Demuxer.TS(options);
+	this.source = new JSMpeg.Source.WebSocket(url, this.options);
+	this.demuxer = new JSMpeg.Demuxer.TS(this.options);
 	this.video = new JSMpeg.Decoder.MPEG1Video(this.options);
 	this.video.source = this.source;
 
@@ -62,7 +61,7 @@ var Crc_Player = function(url, options) {
 	this.play();
 };
 
-Crc_Player.prototype.play = function(ev) {
+Crc_Player.prototype.play = function() {
 	this.animationId = setImmediate(this.update.bind(this));
 	this.wantsToPlay = true;
 };
@@ -107,4 +106,19 @@ protobuf.load("feedback.proto", function(err, root) {
 	JSMpeg.pbroot = root;
 	JSMpeg.pbIntraReport= root.lookupType('FeedBack.IntraReport');
 	JSMpeg.Player = Crc_Player;
+
+	let urls = argv._;
+
+	if (urls.length === 0) {
+		require('./config.js');
+		JSMpegConfig.relays.forEach(function(item){
+			urls.push('ws://localhost:' + item[0]);
+		});
+	}
+
+	console.log('connect urls: ',urls);
+
+	for (var i in urls) {
+		new JSMpeg.Player(urls[i]);
+	}
 });
