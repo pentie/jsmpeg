@@ -30,6 +30,10 @@ WSSource.prototype.destroy = function() {
 	this.socket.close();
 };
 
+WSSource.prototype.send = function(data) {
+	this.socket.send(data);
+};
+
 WSSource.prototype.start = function() {
 	this.shouldAttemptReconnect = !!this.reconnectInterval;
 	this.progress = 0;

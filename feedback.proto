@@ -1,0 +1,9 @@
+package FeedBack;
+syntax = "proto3";
+
+message IntraReport {
+	required string crc32Y = 1;
+	required string crc32Cr = 2;
+	required string crc32Cb = 3;
+	required int32 closeWhenDelay = 4;
+}

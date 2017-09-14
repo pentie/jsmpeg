@@ -10,6 +10,7 @@
 	</style>
 	
 	<script type="text/javascript" src="jsmpeg.min.js"></script>
+	<script type="text/javascript" src="protobuf.min.js"></script>
 </head>
 <body>
 	<canvas id="video-canvas"></canvas>
@@ -23,10 +24,43 @@
 
 
 	<script type="text/javascript">
+
+		var pbroot = null;
+		var pbIntraReport = null;
+		protobuf.load('feedback.proto', function(err, root) {
+			if (err) throw err;
+			pbroot = root;
+			pbIntraReport= pbroot.lookupType('FeedBack.IntraReport');
+		});
+
+
+		function intra_frame_calback(y, cr, cb) {
+			if (pbIntraReport) {
+				var payload = {
+					crc32Y: crc32(y),
+					crc32Cr: crc32(cr),
+					crc32Cb: crc32(cb),
+					closeWhenDelay: 0
+				};
+
+				var err = pbIntraReport.verify(payload);
+				if (err) throw Error(err);
+
+				var msg = pbIntraReport.create(payload);
+				var buff = pbIntraReport.encode(msg).finish();
+
+				if (buff.length > 0) {
+					player.source.send(buff);
+				}
+
+			}
+		}
+
 		var channel= get_url_param('chan', '8182');
 		var canvas = document.getElementById('video-canvas');
 		var url = 'ws://'+document.location.hostname+':'+channel+'/';
 		var player = new JSMpeg.Player(url, {canvas: canvas});
+
 
 		function get_url_param(name, def, url) {
 		    if (!url) url = window.location.href;

@@ -17,5 +17,6 @@ uglifyjs \
 	src/webgl.js \
 	src/canvas2d.js \
 	src/webaudio.js \
+	src/crc.js \
 	-o jsmpeg.min.js
 

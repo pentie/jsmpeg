@@ -7,8 +7,13 @@
   },
   "license": "MIT",
   "dependencies": {
+    "async": "^2.5.0",
     "fluent-ffmpeg": "latest",
     "http-server": "^0.10.0",
+    "js-crc": "^0.2.0",
+    "minimist": "^1.2.0",
+    "protobufjs": "^6.8.0",
+    "redis": "^2.8.0",
     "safe-buffer": "latest",
     "ultron": "latest",
     "ws": "latest"

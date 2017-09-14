@@ -24,6 +24,8 @@ main()
 		exit 0
 	fi
 
+	check_apt redis-server
+
 	if ! cmd_exists /usr/bin/node; then
 		log "installing nodejs"
 		curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
@@ -43,9 +45,7 @@ main()
 		exit 1
 	fi
 
-	 node multi-relays.js $1
-
-	runs "$@"
+	node multi-relays.js $1
 }
 
 build_mjpg_streamer()
