@@ -8,6 +8,8 @@
   "license": "MIT",
   "dependencies": {
     "async": "^2.5.0",
+    "buffer-indexof-polyfill": "^1.0.1",
+    "buffertools": "^2.1.6",
     "fluent-ffmpeg": "latest",
     "http-server": "^0.10.0",
     "js-crc": "^0.2.0",

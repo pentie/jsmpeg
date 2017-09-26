@@ -27,17 +27,16 @@ JSMpeg = {
 	}
 };
 
+require('./src/websocket.js');
 require('./src/buffer.js');
 require('./src/ts.js');
 require('./src/decoder.js');
 require('./src/mpeg1.js');
-require('./src/websocket.js');
 
 //----------------------------------------------------------
 // mepg1 player for crc
 
 var Crc_Player = function(url, options) {
-	this.enable = false;
 	this.options = options || {};
 
 	if (!url.match(/^wss?:\/\//)) {
@@ -76,13 +75,32 @@ Crc_Player.prototype.update = function() {
 //----------------------------------------------------------
 // main and entry
 
-intra_frame_calback = function (y, cr, cb, decoder) {
-	let source = decoder.source;
+var intra_time = 0;
+var conn_id = 0;
+
+intra_frame_calback = function (y, cr, cb, decoder) 
+{
+	let current_connid = decoder.source.conn_id;
+	let current_time = Date.now();
+	let interval_time = current_time - intra_time;
+	intra_time = current_time;
+
+	if (conn_id !== current_connid) {
+		conn_id = current_connid; 
+		return;
+	}
+
+	if (typeof decoder.rand_id === 'undefined') {
+		decoder.rand_id = 'xxyxxyxxyxxyxxyx'.replace(/[xy]/g, function(c) {
+			var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+			return v.toString(16);
+		});
+	}
 
 	var payload = {
-		crc32Y: crc32(y),
-		crc32Cr: crc32(cr),
-		crc32Cb: crc32(cb),
+		userId: decoder.rand_id,
+		intraCrc32: crc32(cb),
+		intraInterval: interval_time,
 		closeWhenDelay: 0
 	};
 
@@ -99,26 +117,6 @@ intra_frame_calback = function (y, cr, cb, decoder) {
 	}
 }
 
+JSMpeg.Player = Crc_Player;
 
-protobuf.load("feedback.proto", function(err, root) {
-	if (err) throw err;
-
-	JSMpeg.pbroot = root;
-	JSMpeg.pbIntraReport= root.lookupType('FeedBack.IntraReport');
-	JSMpeg.Player = Crc_Player;
-
-	let urls = argv._;
-
-	if (urls.length === 0) {
-		require('./config.js');
-		JSMpegConfig.relays.forEach(function(item){
-			urls.push('ws://localhost:' + item[0]);
-		});
-	}
-
-	console.log('connect urls: ',urls);
-
-	for (var i in urls) {
-		new JSMpeg.Player(urls[i]);
-	}
-});
+new JSMpeg.Player('ws://localhost:8081');

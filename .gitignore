@@ -1,6 +1,7 @@
 *.swp
 *.swo
 config.sh
+debug.js
 temp/
 \'
 

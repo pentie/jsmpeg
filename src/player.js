@@ -29,6 +29,8 @@ var Player = function(url, options) {
 
 	if (options.video !== false) {
 		this.video = new JSMpeg.Decoder.MPEG1Video(options);
+		this.video.source = this.source;
+
 		this.renderer = !options.disableGl && JSMpeg.Renderer.WebGL.IsSupported()
 			? new JSMpeg.Renderer.WebGL(options)
 			: new JSMpeg.Renderer.Canvas2D(options);

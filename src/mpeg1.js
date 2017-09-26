@@ -203,16 +203,17 @@ MPEG1.prototype.decodePicture = function(skipOutput) {
 		this.bits.rewind(32);
 	}
 
+	// Invoke decode callbacks
+	if (this.destination) {
+		this.destination.render(this.currentY, this.currentCr, this.currentCb);
+	}
+
 	if (typeof intra_frame_calback === "function") { 
 		if (this.pictureType === MPEG1.PICTURE_TYPE.INTRA) {
 			intra_frame_calback(this.currentY, this.currentCr, this.currentCb, this);
 		}
 	}
 
-	// Invoke decode callbacks
-	if (this.destination) {
-		this.destination.render(this.currentY, this.currentCr, this.currentCb);
-	}
 
 	// If this is a reference picutre then rotate the prediction pointers
 	if (

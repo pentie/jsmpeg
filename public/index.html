@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head>
+	<title>JSMpeg Stream Client</title>
+	<style type="text/css">
+		html, body {
+			background-color: #111;
+			text-align: center;
+		}
+	</style>
+	
+	<script type="text/javascript" src="jsmpeg.min.js"></script>
+	<script type="text/javascript" src="functions.js"></script>
+</head>
+<body>
+	<canvas id="video-canvas"></canvas>
+	<script type="text/javascript">
+		var intra_time = 0;
+		var conn_id = 0;
+
+		function intra_frame_calback(y, cr, cb, decoder) 
+		{
+			let current_connid = decoder.source.conn_id;
+			let current_time = Date.now();
+			let interval_time = current_time - intra_time;
+			intra_time = current_time;
+
+			if (conn_id !== current_connid) {
+				conn_id = current_connid; 
+				return;
+			}
+
+			var payload = {
+				user_id: userid(),
+				intra_crc32 : crc32(cb),
+				intra_interval : interval_time,
+				close_when_delay : 0
+			};
+
+			decoder.source.send(JSON.stringify(payload));
+			console.log(payload.intraCrc32, payload.intraInterval);
+		}
+
+		var canvas = document.getElementById('video-canvas');
+		var url = 'ws://'+document.location.hostname+':8181/';
+		var player = new JSMpeg.Player(url, {canvas: canvas});
+	</script>
+</body>
+</html>

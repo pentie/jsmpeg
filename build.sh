@@ -18,5 +18,5 @@ uglifyjs \
 	src/canvas2d.js \
 	src/webaudio.js \
 	src/crc.js \
-	-o jsmpeg.min.js
+	-o public/jsmpeg.min.js
 

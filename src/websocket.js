@@ -37,6 +37,7 @@ WSSource.prototype.send = function(data) {
 WSSource.prototype.start = function() {
 	this.shouldAttemptReconnect = !!this.reconnectInterval;
 	this.progress = 0;
+	this.conn_id = Math.floor(Math.random() * 1000);
 	this.established = false;
 	
 	this.socket = new WebSocket(this.url, this.options.protocols || null);
