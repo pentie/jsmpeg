@@ -1,7 +1,5 @@
 
 var WebSocket = require('ws');
-var WebSocketServer = require('./wsocket-relay.js');
-
 
 class MJpegHandler 
 {

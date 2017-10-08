@@ -1,10 +1,5 @@
-var async = require("async");
-var redis = require("redis");
-var client = redis.createClient();
-var crc32 = require('js-crc').crc32;
 
 var WebSocket = require('ws');
-var WebSocketServer = require('./wsocket-relay.js'); 
 var mpeg1video_chunk = require('./ffmpeg-utils.js').mpeg1video_chunk;
 
 const DEFAULT_QSCALE = 8;
@@ -61,6 +56,13 @@ module.exports = Mpeg1VideoHandler;
 
 
 /*************************/
+/*
+
+var async = require("async");
+var redis = require("redis");
+var client = redis.createClient();
+var crc32 = require('js-crc').crc32;
+
 
 function _check_crc_routine ()
 {
@@ -208,4 +210,5 @@ function __check_from_redis (cb_done)
 	});
 }
 
+*/
 

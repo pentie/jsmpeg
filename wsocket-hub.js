@@ -1,6 +1,6 @@
 var WebSocket = require('ws');
 
-class WebSocketServer 
+class WebSocketHub 
 {
 	constructor(port) 
 	{
@@ -112,4 +112,4 @@ class WebSocketServer
 	}
 }
 
-module.exports = WebSocketServer;
+module.exports = WebSocketHub;
