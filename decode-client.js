@@ -78,9 +78,9 @@ Crc_Player.prototype.update = function() {
 var intra_time = 0;
 var conn_id = 0;
 
-intra_frame_calback = function (y, cr, cb, decoder) 
+intra_frame_calback = function (y, cr, cb, source) 
 {
-	let current_connid = decoder.source.conn_id;
+	let current_connid = source.conn_id;
 	let current_time = Date.now();
 	let interval_time = current_time - intra_time;
 	intra_time = current_time;

@@ -2,92 +2,74 @@ var async = require("async");
 var redis = require("redis");
 var client = redis.createClient();
 var crc32 = require('js-crc').crc32;
+
 var WebSocket = require('ws');
+var WebSocketServer = require('./wsocket-relay.js'); 
 var mpeg1video_chunk = require('./ffmpeg-utils.js').mpeg1video_chunk;
 
 const DEFAULT_QSCALE = 8;
 const MAX_EXPIRE_TIME = 3600;
 const MAX_DELAY_TIME = 5000;
-const CHANNELS = [1, 2, 4];
 
-Mpeg1VideoWebsocket = function (port) 
+class Mpeg1VideoHandler 
 {
-	this.que_reports = [];
+	constructor(env) {
+		this.handlerName = 'mpeg1';
+		this.eachClient = env.get('eachClient');
+		this.chunker = mpeg1video_chunk(this.__mpeg1Feed.bind(this), DEFAULT_QSCALE);
+	}
 
-	this.socketServer=new WebSocket.Server({port: port, perMessageDeflate:false, binaryType:'arraybuffer'});
-	this.socketServer.connectionCount = 0;
+	onConnect (socket) {
+		socket.feedActive = false;
+	}
 
-	this.socketServer.on('connection', (function(socket, upgradeReq) {
-		this.socketServer.connectionCount++;
-		//socket.client_id = ;
-		console.log(
-			'New mpeg1video Connection: ', 
-			(upgradeReq || socket.upgradeReq).socket.remoteAddress,
-			(upgradeReq || socket.upgradeReq).headers['user-agent'],
-			'('+this.socketServer.connectionCount+' total)'
-		);
+	feed (chunk) {
+		this.chunker(chunk);
+	}
 
-		socket.on('close', (function(code, message){
-			this.socketServer.connectionCount--;
-			console.log(
-				'Disconnected mpeg1video('+this.socketServer.connectionCount+' total)'
-			);
-		}).bind(this));
-
-		socket.on('message', (function(dataStr){
-			let req = null;
-			try {
-				req = JSON.parse(dataStr);
-			} catch (e) {
-			}
-
-			if (req) {
-				this.__onCmdRequest(socket, req);
-			}
-		}).bind(this));
-
-		socket.on('error', function(err){
-			console.log('mpeg1video err: '+err);	
+	__mpeg1Feed (chunk) {
+		this.eachClient(function(client) {
+			client.feedActive && client.send(chunk);
 		});
-	}).bind(this));
+	}
 
-	this.chunker = mpeg1video_chunk(this.__broadcast.bind(this), DEFAULT_QSCALE);
-	this.__check_crc_routine();
-};
+	onRequest (socket, req) {
+		let user_id = req.user_id;
+		 
+		 switch (req.cmd) {
+		 	case 'active':
+				console.log(req);
+				socket.feedActive = !!(req.param === true);
+				break;
 
-Mpeg1VideoWebsocket.prototype.feed = function(images_chunk) {
-	this.chunker(images_chunk);
-};
+			case 'intra':
+				let key = req.intra_crc32;
+				let intra_interval = req.intra_interval;
+				let spec_timeout = req.close_when_delay;
+				let new_req = [key, Date.now(), spec_timeout, intra_interval, socket];
+				
+				console.log(user_id, key, intra_interval);
+				break;
 
-Mpeg1VideoWebsocket.prototype.__onCmdRequest= function(socket, req) 
-{
-	let user_id = req.user_id;
-	let key = req.intra_crc32;
-	let intra_interval = req.intra_interval;
-	let spec_timeout = req.close_when_delay;
-	
-	console.log(user_id, key, intra_interval);
+			default:
+				console.log('cmd not handled: ', req);
+		 }
+	}
+}
 
-	let new_req = [key, Date.now(), spec_timeout, intra_interval, socket];
-	this.que_reports.push(new_req);
-};
+module.exports = Mpeg1VideoHandler;
 
-Mpeg1VideoWebsocket.prototype.__broadcast = function(chunk) {
-	this.socketServer.clients.forEach(function each(client) {
-		if (client.readyState === WebSocket.OPEN) {
-			client.send(chunk);
-		}
-	});
-};
 
-Mpeg1VideoWebsocket.prototype.__check_crc_routine = function ()
+/*************************/
+
+function _check_crc_routine ()
 {
 	this.__check_from_redis(()=>{
-		setTimeout(this.__check_crc_routine.bind(this), 1000);
+		setTimeout(this._check_crc_routine.bind(this), 1000);
 	});
-};
+}
 
-Mpeg1VideoWebsocket.prototype.__check_from_redis = function (cb_done)
+function __check_from_redis (cb_done)
 {
 	if (this.que_reports.length === 0) {
 		cb_done();
@@ -224,9 +206,6 @@ Mpeg1VideoWebsocket.prototype.__check_from_redis = function (cb_done)
 		this.que_reports.length = 0;
 		cb_done();
 	});
-};
+}
 
 
-module.exports = function(port){
-	return new Mpeg1VideoWebsocket(port);
-};

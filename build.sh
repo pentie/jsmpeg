@@ -10,8 +10,10 @@ uglifyjs \
 	src/ajax.js \
 	src/ajax-progressive.js \
 	src/websocket.js \
+	src/source-disp.js \
 	src/ts.js \
 	src/decoder.js \
+	src/mjpeg.js \
 	src/mpeg1.js \
 	src/mp2.js \
 	src/webgl.js \

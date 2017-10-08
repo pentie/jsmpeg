@@ -1,0 +1,10 @@
+*.swp
+*.swo
+config.sh
+debug.html
+temp/
+\'
+
+--fail
+--location
+

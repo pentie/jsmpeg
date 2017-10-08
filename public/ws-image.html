@@ -11,7 +11,7 @@
 		var last_req_time = 0;
 		var last_draw_time = 0;
 
-		var url = 'ws://'+document.location.hostname + ':54018';
+		var url = 'ws://'+document.location.hostname + ':8081';
 		var ws = ws_client(url, 3000, function(evt) {
 			//evt=null is onopen event
 			if (evt === null) {
@@ -35,6 +35,7 @@
 
 		function req_feed(req_time, draw_time) {
 			let req_data = {
+				handler: 'mjpeg',
 				user_id: userid(),
 				req_time: last_req_time, 
 				draw_time: last_draw_time

@@ -20,22 +20,30 @@ var Player = function(url, options) {
 		options.streaming = false;
 	}
 
+
 	this.maxAudioLag = options.maxAudioLag || 0.25;
 	this.loop = options.loop !== false;
 	this.autoplay = !!options.autoplay || options.streaming;
 
 	this.demuxer = new JSMpeg.Demuxer.TS(options);
-	this.source.connect(this.demuxer);
+	this.mjpeg = new JSMpeg.Decoder.MJpeg(options);
+	this.dispatcher = new JSMpeg.Source.Dispatch(options);
+
+	this.source.connect(this.dispatcher);
+	this.dispatcher.connect(JSMpeg.Source.Dispatch.SOURCEID.SOURCE_MPEG1, this.demuxer);
+	this.dispatcher.connect(JSMpeg.Source.Dispatch.SOURCEID.SOURCE_MJPEG, this.mjpeg);
 
 	if (options.video !== false) {
 		this.video = new JSMpeg.Decoder.MPEG1Video(options);
 		this.video.source = this.source;
+		this.mjpeg.source = this.source;
 
 		this.renderer = !options.disableGl && JSMpeg.Renderer.WebGL.IsSupported()
 			? new JSMpeg.Renderer.WebGL(options)
 			: new JSMpeg.Renderer.Canvas2D(options);
 		this.demuxer.connect(JSMpeg.Demuxer.TS.STREAM.VIDEO_1, this.video);
 		this.video.connect(this.renderer);
+		this.mjpeg.connect(this.renderer);
 	}
 
 	if (options.audio !== false && JSMpeg.AudioOutput.WebAudio.IsSupported()) {
@@ -173,6 +181,10 @@ Player.prototype.updateForStreaming = function() {
 
 	if (this.video) {
 		this.video.decode();
+	}
+
+	if (this.mjpeg) {
+		this.mjpeg.decode();
 	}
 
 	if (this.audio) {

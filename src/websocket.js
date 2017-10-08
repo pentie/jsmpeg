@@ -37,7 +37,6 @@ WSSource.prototype.send = function(data) {
 WSSource.prototype.start = function() {
 	this.shouldAttemptReconnect = !!this.reconnectInterval;
 	this.progress = 0;
-	this.conn_id = Math.floor(Math.random() * 1000);
 	this.established = false;
 	
 	this.socket = new WebSocket(this.url, this.options.protocols || null);
@@ -55,6 +54,10 @@ WSSource.prototype.resume = function(secondsHeadroom) {
 WSSource.prototype.onOpen = function() {
 	this.progress = 1;
 	this.established = true;
+
+	if (typeof JSMpeg.on_source_opened === "function") { 
+		JSMpeg.on_source_opened(this);
+	}
 };
 
 WSSource.prototype.onClose = function() {

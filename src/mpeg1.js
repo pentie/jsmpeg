@@ -208,9 +208,9 @@ MPEG1.prototype.decodePicture = function(skipOutput) {
 		this.destination.render(this.currentY, this.currentCr, this.currentCb);
 	}
 
-	if (typeof intra_frame_calback === "function") { 
+	if (typeof JSMpeg.on_intra_rendered === "function") { 
 		if (this.pictureType === MPEG1.PICTURE_TYPE.INTRA) {
-			intra_frame_calback(this.currentY, this.currentCr, this.currentCb, this);
+			JSMpeg.on_intra_rendered(this.currentY, this.currentCr, this.currentCb, this.source);
 		}
 	}
 

@@ -41,6 +41,13 @@ CanvasRenderer.prototype.render = function(y, cb, cr) {
 	this.context.putImageData(this.imageData, 0, 0);
 };
 
+CanvasRenderer.prototype.renderJpeg = function(image) {
+	var ctx = this.context;
+	ctx.canvas.width = image.width;
+	ctx.canvas.height = image.height;
+	ctx.drawImage(image, 0, 0);
+};
+
 CanvasRenderer.prototype.YCbCrToRGBA = function(y, cb, cr, rgba) {
 	if (!this.enabled) {
 		return;
