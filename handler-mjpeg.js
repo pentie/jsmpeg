@@ -5,27 +5,37 @@ class MJpegHandler
 {
 	constructor(env) {
 		this.handlerName = 'mjpeg';
+		this.nodeId = env.get('nodeId');
+		this.chunkHead = 0xFFD8;	
 		this.feed_list = new Array();
+		this.upstreamLastTime = Date.now();
 	}
 
-	onConnect (socket) {
+	onUpConnect (socket) 
+	{
+		let nowTime = Date.now();
+
+		socket.send(JSON.stringify({
+			user_id: this.nodeId,
+			handler: this.handlerName,
+			cmd: 'active',
+			req_time: nowTime - this.upstreamLastTime,
+			draw_time: 0
+		}));
+
+		this.upstreamLastTime = nowTime;
 	}
 
-	onRequest (socket, req) {
-		let user_id = req.user_id;
-		 
-		 switch (req.cmd) {
-		 	case 'active':
-			case 'interval':
-				this.feed_list.push(socket);
-				break;
-
-			default:
-				console.log('cmd not handled: ', req);
-		 }
+	onUpResponse (chunk, socket) {
+		this.downstream(chunk);
+		this.onUpConnect(socket);
 	}
 
 	feed (chunk) {
+		this.downstream (chunk);
+	}
+
+	downstream (chunk) {
 		if (this.feed_list.length === 0) {
 			return;
 		}
@@ -38,6 +48,23 @@ class MJpegHandler
 		}
 		this.feed_list.length = 0;
 	}
+
+	onDownConnect (socket) {
+	}
+
+	onDownRequest (socket, req) {
+		let user_id = req.user_id;
+		 switch (req.cmd) {
+		 	case 'active':
+			case 'interval':
+				this.feed_list.push(socket);
+				break;
+
+			default:
+				console.log('cmd not handled: ', req);
+		 }
+	}
+
 }
 
 module.exports = MJpegHandler;

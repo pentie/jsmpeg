@@ -10,30 +10,44 @@ class Mpeg1VideoHandler
 {
 	constructor(env) {
 		this.handlerName = 'mpeg1';
+		this.chunkHead = 0x47;	
 		this.eachClient = env.get('eachClient');
-		this.chunker = mpeg1video_chunk(this.__mpeg1Feed.bind(this), DEFAULT_QSCALE);
+		this.nodeId = env.get('nodeId');
+		this.chunker = mpeg1video_chunk(this.downstream.bind(this), DEFAULT_QSCALE);
 	}
 
-	onConnect (socket) {
-		socket.feedActive = false;
+	onUpConnect (socket) {
+		socket.send(JSON.stringify({
+			user_id: this.nodeId,
+			handler: this.handlerName,
+			cmd: 'active',
+			param: true
+		}));
+	}
+
+	onUpResponse (chunk, socket) {
+		this.downstream(chunk);
 	}
 
 	feed (chunk) {
 		this.chunker(chunk);
 	}
 
-	__mpeg1Feed (chunk) {
+	downstream (chunk) {
 		this.eachClient(function(client) {
 			client.feedActive && client.send(chunk);
 		});
 	}
 
-	onRequest (socket, req) {
+	onDownConnect (socket) {
+		socket.feedActive = false;
+	}
+
+	onDownRequest (socket, req) {
 		let user_id = req.user_id;
 		 
 		 switch (req.cmd) {
 		 	case 'active':
-				console.log(req);
 				socket.feedActive = !!(req.param === true);
 				break;
 

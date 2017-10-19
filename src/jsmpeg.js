@@ -113,9 +113,18 @@ var JSMpeg =
 		var elements = document.querySelectorAll('.jsmpeg');
 		for (var i = 0; i < elements.length; i++) {
 			var url = elements[i].dataset.url;
-			if (/^\d+$/.test(url)) {
-				elements[i].dataset.url = 'ws://'+document.location.hostname+':'+url;
+
+			if (!url) {
+				if (document.location.port) {
+					url = 'ws://'+document.location.hostname+':'+document.location.port;
+				} else {
+					url = 'ws://'+document.location.hostname;
+				}
+			} else if (/^\d+$/.test(url)) {
+				url = 'ws://'+document.location.hostname+':'+url;
 			}
+
+			elements[i].dataset.url = url;
 			var video_obj = new JSMpeg.VideoElement(elements[i]);
 			window.video_objs.push(video_obj);
 		}

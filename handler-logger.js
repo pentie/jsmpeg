@@ -10,12 +10,13 @@ class LoggerHandler
 {
 	constructor (env) {
 		this.handlerName = 'logger';
+		this.chunkHead = 0x5b;	
 		env.set('error', this.error.bind(this));
 		env.set('debug', this.debug.bind(this));
 		env.set('console', this.console.bind(this));
 	}
 
-	onRequest (socket, req) {
+	onDownRequest (socket, req) {
 
 	}
 
