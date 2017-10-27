@@ -1,11 +1,14 @@
 var JSMpeg = 
 {
 	config: {
-		mjpeg_frame_interval: 1000,
+		mjpegFrameInterval: 1000,
+		videoMode : 'mpeg1',
 	},
 
-	get_analytics: function()
-	{
+	infos : {
+		mjpegTime : [],
+		mpeg1Time : [],
+		nodeTree: []
 
 	},
 
@@ -14,7 +17,7 @@ var JSMpeg =
 		for (var index in window.video_objs) {
 			var source = window.video_objs[index].player.source; 
 
-			var req_template = {
+			var req = {
 				handler: mode,
 				user_id: userid(),
 				cmd: 'active',
@@ -23,16 +26,14 @@ var JSMpeg =
 
 			switch (mode) {
 				case 'mpeg1':
-					source.send(JSON.stringify(req_template));
-					window.mjpeg_enabled = false;
+					source.send(JSON.stringify(req));
 					break;
 				case 'mjpeg':
-					source.send(JSON.stringify(req_template));
-					window.mjpeg_enabled = true;
+					source.send(JSON.stringify(req));
 
-					req_template.handler = 'mpeg1';
-					req_template.param = false;
-					source.send(JSON.stringify(req_template));
+					req.handler = 'mpeg1';
+					req.param = false;
+					source.send(JSON.stringify(req));
 					break;
 				default:
 					console.log('error mode: ', mode);
@@ -43,10 +44,8 @@ var JSMpeg =
 	on_source_opened: function (source) 
 	{
 		source.conn_id = Math.floor(Math.random() * 1000);
-		window.mjpeg_enabled = source.options.start === 'mjpeg';
-
 		source.send(JSON.stringify({
-			handler: source.options.start,
+			handler: JSMpeg.config.videoMode,
 			user_id: userid(),
 			cmd: 'active',
 			param: true
@@ -87,7 +86,7 @@ var JSMpeg =
 
 	on_mjpeg_rendered: function (source, renderTime) 
 	{
-		if (window.mjpeg_enabled) {
+		if (JSMpeg.config.videoMode === 'mjpeg') {
 			setTimeout(function(){
 				source.send(JSON.stringify({
 					user_id: userid(),
@@ -95,7 +94,7 @@ var JSMpeg =
 					cmd: 'interval',
 					renderTime: renderTime,
 				}));
-			}, JSMpeg.config.mjpeg_frame_interval);
+			}, JSMpeg.config.mjpegFrameInterval);
 		}
 	},
 

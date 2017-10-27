@@ -27,16 +27,19 @@ var Player = function(url, options) {
 
 	this.demuxer = new JSMpeg.Demuxer.TS(options);
 	this.mjpeg = new JSMpeg.Decoder.MJpeg(options);
+	this.JsonMsg = new JSMpeg.Decoder.JsonMsg(options);
 	this.dispatcher = new JSMpeg.Source.Dispatch(options);
 
 	this.source.connect(this.dispatcher);
 	this.dispatcher.connect(JSMpeg.Source.Dispatch.SOURCEID.SOURCE_MPEG1, this.demuxer);
 	this.dispatcher.connect(JSMpeg.Source.Dispatch.SOURCEID.SOURCE_MJPEG, this.mjpeg);
+	this.dispatcher.connect(JSMpeg.Source.Dispatch.SOURCEID.SOURCE_JSON, this.JsonMsg);
 
 	if (options.video !== false) {
 		this.video = new JSMpeg.Decoder.MPEG1Video(options);
 		this.video.source = this.source;
 		this.mjpeg.source = this.source;
+		this.JsonMsg.source = this.source;
 
 		this.renderer = !options.disableGl && JSMpeg.Renderer.WebGL.IsSupported()
 			? new JSMpeg.Renderer.WebGL(options)

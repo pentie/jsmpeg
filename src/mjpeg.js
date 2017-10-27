@@ -2,6 +2,8 @@ JSMpeg.Decoder.MJpeg = (function(){ "use strict";
 
 var MJpeg = function(options) {
 	this.newest_image = null;
+	this.width = 0;
+	this.height = 0;
 };
 
 MJpeg.prototype.connect = function(destination) {
@@ -21,7 +23,14 @@ MJpeg.prototype.decode = function() {
 		var begintime = Date.now();
 
 		var image = new Image();
+		var oldWidth = this.width;
+		var oldHeight = this.height;
+		
 		image.onload = function () {
+			if (oldWidth !== this.width || oldHeight !== this.height) {
+				this.destination.resize(newWidth, newHeight);
+			}
+
 			this.destination.renderJpeg(image);
 			if (typeof JSMpeg.on_mjpeg_rendered === "function") { 
 				JSMpeg.on_mjpeg_rendered(this.source, Date.now() - begintime);

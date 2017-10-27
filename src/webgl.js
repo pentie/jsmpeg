@@ -172,6 +172,37 @@ WebGLRenderer.prototype.render = function(y, cb, cr) {
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 };
 
+WebGLRenderer.prototype.renderJpeg = function(image) {
+	if (!this.enabled) {
+		return;
+	}
+
+	var gl = this.gl;
+
+	if (!this.imageProgram) {
+		this.imageProgram = this.createProgram(
+			WebGLRenderer.SHADER.VERTEX_IDENTITY,
+			WebGLRenderer.SHADER.FRAGMENT_IMAGE
+		);
+
+		var vertexAttr = gl.getAttribLocation(this.imageProgram, 'vertex');
+		gl.enableVertexAttribArray(vertexAttr);
+		gl.vertexAttribPointer(vertexAttr, 2, gl.FLOAT, false, 0, 0);
+
+		this.textureImage = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, this.textureImage);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		this.imageProgram.imageUniform = gl.getUniformLocation(this.imageProgram, 'textureImage');
+	}
+
+	gl.useProgram(this.imageProgram);
+	this.updateTextureImage(gl.TEXTURE0, this.textureImage, image);
+	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+};
+
 /*
 
 WebGLRenderer.prototype.drawImage= function(image) {
@@ -247,10 +278,12 @@ WebGLRenderer.prototype.drawImage= function(image) {
 };
 */
 
-WebGLRenderer.prototype.renderJpeg = function(image) {
-	console.log('render webgl');
-
-};
+WebGLRenderer.prototype.updateTextureImage = function(unit, texture, image) {
+	var gl = this.gl;
+	gl.activeTexture(unit);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+}
 
 WebGLRenderer.prototype.updateTexture = function(unit, texture, w, h, data) {
 	var gl = this.gl;
@@ -307,6 +340,16 @@ WebGLRenderer.IsSupported = function() {
 };
 
 WebGLRenderer.SHADER = {
+	FRAGMENT_IMAGE : [
+		'precision mediump float;',
+		'uniform sampler2D textureImage;',
+		'varying vec2 texCoord;',
+
+		'void main() {',
+			'gl_FragColor = texture2D(textureImage, texCoord);',
+		'}'
+	].join('\n'),
+
 	FRAGMENT_YCRCB_TO_RGBA: [
 		'precision mediump float;',
 		'uniform sampler2D textureY;',

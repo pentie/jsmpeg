@@ -1,22 +1,40 @@
 
-var WebSocket = require('ws');
 var mpeg1video_chunk = require('./ffmpeg-utils.js').mpeg1video_chunk;
 
 const DEFAULT_QSCALE = 8;
 const MAX_EXPIRE_TIME = 3600;
 const MAX_DELAY_TIME = 5000;
 
-class Mpeg1VideoHandler 
+module.exports = class Mpeg1VideoHandler 
 {
-	constructor(env) {
+	constructor(env) 
+	{
 		this.handlerName = 'mpeg1';
 		this.chunkHead = 0x47;	
 		this.eachClient = env.get('eachClient');
 		this.nodeId = env.get('nodeId');
+		this.cache = env.get('newCache')();
 		this.chunker = mpeg1video_chunk(this.downstream.bind(this), DEFAULT_QSCALE);
 	}
 
-	onUpConnect (socket) {
+	infos () 
+	{
+		let counter = 0;
+		this.eachClient(function(client) {
+			if (client.feedActive) {
+				counter++;
+			}
+		});
+
+		return {
+			module: this.handlerName,
+			clientCount: counter,
+			playCount: this.cache.keys().length
+		};
+	}
+
+	onUpConnect (socket) 
+	{
 		socket.send(JSON.stringify({
 			user_id: this.nodeId,
 			handler: this.handlerName,
@@ -25,25 +43,32 @@ class Mpeg1VideoHandler
 		}));
 	}
 
-	onUpResponse (chunk, socket) {
+	onUpResponse (chunk, socket) 
+	{
 		this.downstream(chunk);
 	}
 
-	feed (chunk) {
+	feed (chunk) 
+	{
 		this.chunker(chunk);
 	}
 
-	downstream (chunk) {
+	downstream (chunk) 
+	{
 		this.eachClient(function(client) {
 			client.feedActive && client.send(chunk);
 		});
 	}
 
-	onDownConnect (socket) {
+	onDownConnect (socket) 
+	{
 		socket.feedActive = false;
 	}
 
-	onDownRequest (socket, req) {
+	onDownRequest (socket, req) 
+	{
+		console.log(req);
+
 		let user_id = req.user_id;
 		 
 		 switch (req.cmd) {
@@ -52,6 +77,8 @@ class Mpeg1VideoHandler
 				break;
 
 			case 'intra':
+				this.cache.set(user_id, Date.now(), 3);
+
 				let key = req.intra_crc32;
 				let intra_interval = req.intra_interval;
 				let spec_timeout = req.close_when_delay;
@@ -64,9 +91,7 @@ class Mpeg1VideoHandler
 				console.log('cmd not handled: ', req);
 		 }
 	}
-}
-
-module.exports = Mpeg1VideoHandler;
+};
 
 
 /*************************/

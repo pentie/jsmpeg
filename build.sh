@@ -13,6 +13,7 @@ uglifyjs \
 	src/source-disp.js \
 	src/ts.js \
 	src/decoder.js \
+	src/json-event.js \
 	src/mjpeg.js \
 	src/mpeg1.js \
 	src/mp2.js \

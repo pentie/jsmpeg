@@ -8,7 +8,7 @@ var SourceDisp = function(options) {
 SourceDisp.SOURCEID = {
 	SOURCE_MPEG1: 0x47, 
 	SOURCE_MJPEG: 0xFFD8, 
-	SOURCE_JSON: 0x5b
+	SOURCE_JSON: 0x7b
 };
 
 SourceDisp.prototype.connect = function(sourceId, destination) {
@@ -19,8 +19,16 @@ SourceDisp.prototype.connect = function(sourceId, destination) {
 };
 
 SourceDisp.prototype.write = function(buffer) {
-	var dataView = new DataView(buffer);
-	var signs = [dataView.getUint8(0), dataView.getUint16(0)];
+	var signs = [];
+
+	if (typeof buffer === 'string') {
+		signs.push(buffer.charCodeAt(0));
+	} else {
+
+		var dataView = new DataView(buffer);
+		signs.push(dataView.getUint8(0));
+		signs.push(dataView.getUint16(0));
+	}
 
 	var done = signs.some(function each(sign) {
 		return this.distList.some(function each(dist) {

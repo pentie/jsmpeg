@@ -15,6 +15,7 @@
     "fluent-ffmpeg": "latest",
     "js-crc": "^0.2.0",
     "minimist": "^1.2.0",
+    "node-cache": "^4.1.1",
     "node-machine-id": "^1.1.9",
     "protobufjs": "^6.8.0",
     "redis": "^2.8.0",

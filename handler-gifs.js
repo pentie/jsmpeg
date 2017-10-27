@@ -1,35 +1,23 @@
 
-module.exports = class MJpegHandler 
+class GifsHandler 
 {
-	constructor(env) 
-	{
-		this.handlerName = 'mjpeg';
+	constructor(env) {
+		this.handlerName = 'gifs';
 		this.nodeId = env.get('nodeId');
-		this.cache = env.get('newCache')();
 		this.eachClient = env.get('eachClient');
-		this.chunkHead = 0xFFD8;	
+		//this.chunkHead = 0xFFD8;	
 		this.feed_list = new Array();
 		this.upstreamLastTime = Date.now();
 	}
 
-	infos () 
-	{
-		let activeCount = this.cache.keys().length;
-		return {
-			module: this.handlerName,
-			clientCount: activeCount,
-			playCount: activeCount
-		};
-	}
-
-	onUpConnect (socket, cmd = 'active') 
+	onUpConnect (socket) 
 	{
 		let nowTime = Date.now();
 
 		socket.send(JSON.stringify({
 			user_id: this.nodeId,
 			handler: this.handlerName,
-			cmd: cmd,
+			cmd: 'active',
 			req_time: nowTime - this.upstreamLastTime,
 			draw_time: 0
 		}));
@@ -37,26 +25,19 @@ module.exports = class MJpegHandler
 		this.upstreamLastTime = nowTime;
 	}
 
-	onUpResponse (chunk, socket) 
-	{
+	onUpResponse (chunk, socket) {
 		this.downstream(chunk);
-
-		setTimeout(function(){
-			this.onUpConnect(socket, 'interval');
-		}.bind(this), 100);
 	}
 
-	feed (chunk) 
-	{
+	feed (chunk) {
 		this.downstream (chunk);
 	}
 
-	downstream (chunk) 
-	{
+	downstream (chunk) {
 		if (this.feed_list.length === 0) {
 			return;
 		}
-
+	
 		this.eachClient(function each(client) {
 			client.send(chunk);
 		}, this.feed_list);
@@ -64,18 +45,13 @@ module.exports = class MJpegHandler
 		this.feed_list.length = 0;
 	}
 
-	onDownConnect (socket) 
-	{
+	onDownConnect (socket) {
 	}
 
-	onDownRequest (socket, req) 
-	{
+	onDownRequest (socket, req) {
 		let user_id = req.user_id;
-		this.cache.set(user_id, Date.now(), 5);
-
 		 switch (req.cmd) {
 		 	case 'active':
-				console.log(req);
 			case 'interval':
 				this.feed_list.push(socket);
 				break;
@@ -85,6 +61,7 @@ module.exports = class MJpegHandler
 		 }
 	}
 
-};
+}
 
+module.exports = GifsHandler;
 

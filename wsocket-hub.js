@@ -5,14 +5,16 @@ const url = require('url');
 const WebSocket = require('ws');
 const machineIdSync = require('node-machine-id').machineIdSync;
 const crypto = require('crypto');
+const NodeCache = require('node-cache');
 
 const UPSTREAM_RECONNECT_INTERVAL = 300;
 
-class WebSocketHub 
+module.exports = class WebSocketHub 
 {
 	constructor(port) 
 	{
 		this.handlers = new Array();
+		this.handlerClass = new Array();
 		this.env = new Map(); 
 		this.port = port;
 
@@ -65,6 +67,40 @@ class WebSocketHub
 		this.env.set('server', this.socketServer);
 		this.env.set('eachClient', this.eachClient.bind(this));
 		this.env.set('nodeId', this.getNodeId());
+		this.env.set('newCache', this.newCache.bind(this));
+		this.env.set('isCenter', true);
+		this.env.set('nodeInfos', this.infos.bind(this));
+	}
+
+	infos () {
+		let meInfo = {
+			module: 'node',
+			nodeId: this.env.get('nodeId'),
+			upstreamUrl: this.env.get('upstreamUrl')
+		};
+
+		let results = [meInfo];
+
+		this.handlers.forEach(function(handler) {
+			if (typeof handler.infos === "function") { 
+				results.push(handler.infos());
+			}
+		});
+
+		return results;
+	}
+
+	newCache (options)
+	{
+		options = options || {checkperiod: 500};
+
+		if (typeof this.caches === 'undefined') {
+			this.caches = [];
+		}
+
+		let cache = new NodeCache(options);
+		this.caches.push(cache);
+		return cache;
 	}
 
 	getNodeId () 
@@ -104,17 +140,18 @@ class WebSocketHub
 
 	addHandler (Handler) 
 	{
-		this.handlers.push(new Handler(this.env));
+		this.handlerClass.push(Handler);
 	}
 
-	eachClient (callback) 
+	eachClient (callback, whiteList) 
 	{
-		this.socketServer.clients.forEach(function each(client) {
+		let enum_list = whiteList? whiteList : this.socketServer.clients;
+
+		enum_list.forEach(function each(client) {
 			if (client.readyState === WebSocket.OPEN) {
 				callback(client);
 			}
 		});
-
 	}
 
 	broadcast (chunk) 
@@ -126,27 +163,54 @@ class WebSocketHub
 		});
 	}
 
+	run (url = null) 
+	{
+		if (url) {
+			this.env.set('isCenter', false);
+			this.env.set('upstreamUrl', url);
+		}
+
+		this.handlerClass.forEach(function (Handler) {
+			this.handlers.push(new Handler(this.env));
+		}.bind(this));
+
+		if (url) {
+			this.upstream(url);
+		}
+	}
+
 	upstream (url, interval = UPSTREAM_RECONNECT_INTERVAL) 
 	{
 		let handlers = this.handlers;
 		this.wsClient(url, interval, function recv(data){
-			handlers.forEach(function(handler) {
-				if (data === null) {
-					if (typeof handler.onUpConnect === "function") { 
-						handler.onUpConnect(this.socket);
-					}
-					return;
-				}
+			var socket = this;
 
+			if (data === null) {
+				handlers.forEach(function(handler) {
+					if (typeof handler.onUpConnect === "function") { 
+						handler.onUpConnect(socket);
+					}
+				});
+				return;
+			}
+
+			var signs = [];
+			if (typeof data === 'string') {
+				signs.push(data.charCodeAt(0));
+			} else {
+
+				var dataView = new DataView(data);
+				signs.push(dataView.getUint8(0));
+				signs.push(dataView.getUint16(0));
+			}
+
+			handlers.forEach(function(handler) {
 				if (typeof handler.onUpResponse !== "function") { 
 					return;
 				}
 
-				let dataView = new DataView(data);
-				let signs = [dataView.getUint8(0), dataView.getUint16(0)];
-
 				if (signs.includes(handler.chunkHead)) {
-					handler.onUpResponse (data, this.socket);
+					handler.onUpResponse (data, socket);
 				}
 			}, this);
 		});
@@ -194,6 +258,4 @@ class WebSocketHub
 
 		return new WSClient().start();
 	}
-}
-
-module.exports = WebSocketHub;
+};
