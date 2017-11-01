@@ -27,16 +27,15 @@ module.exports = class Mpeg1VideoHandler
 		});
 
 		return {
-			module: this.handlerName,
-			clientCount: counter,
-			playCount: this.cache.keys().length
+			mpeg1ClientCount: counter,
+			mpeg1ActiveCount: this.cache.keys().length
 		};
 	}
 
 	onUpConnect (socket) 
 	{
 		socket.send(JSON.stringify({
-			user_id: this.nodeId,
+			userId: this.nodeId,
 			handler: this.handlerName,
 			cmd: 'active',
 			param: true
@@ -69,7 +68,7 @@ module.exports = class Mpeg1VideoHandler
 	{
 		console.log(req);
 
-		let user_id = req.user_id;
+		let userId = req.userId;
 		 
 		 switch (req.cmd) {
 		 	case 'active':
@@ -77,14 +76,14 @@ module.exports = class Mpeg1VideoHandler
 				break;
 
 			case 'intra':
-				this.cache.set(user_id, Date.now(), 3);
+				this.cache.set(userId, Date.now(), 3);
 
 				let key = req.intra_crc32;
 				let intra_interval = req.intra_interval;
 				let spec_timeout = req.close_when_delay;
 				let new_req = [key, Date.now(), spec_timeout, intra_interval, socket];
 				
-				console.log(user_id, key, intra_interval);
+				console.log(userId, key, intra_interval);
 				break;
 
 			default:

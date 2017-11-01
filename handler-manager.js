@@ -1,7 +1,7 @@
 
 module.exports = class ManagerHandler 
-{
-	constructor(env) {
+	{
+		constructor(env) {
 		this.handlerName = 'manager';
 		this.nodeId = env.get('nodeId');
 		this.eachClient = env.get('eachClient');
@@ -10,24 +10,30 @@ module.exports = class ManagerHandler
 		this.isCenter = env.get('isCenter');
 		this.nodeInfos = env.get('nodeInfos');
 		this.isCenter && setInterval(this.heartbeat.bind(this), 1000);
+		this.edgeNodes = [];
 	}
 
 	heartbeat () 
 	{
 		this.downstream( JSON.stringify({
-			center: this.nodeId,
-			handler: this.handlerName,
-			cmd: 'nodeInfos',
-			nodes: [ this.nodeInfos() ]
+			cmd: 'report',
+			nodes: [ this.nodeInfos() ],
+			edgeNodes: this.edgeNodes
 		}));
+
+		this.edgeNodes.length = 0;
 	}
 
 	infos () 
 	{
+		var count = 0;
+		this.eachClient(function each(socket){
+			socket.isNode && count++;
+		});
+
 		return {
-			module: this.handlerName,
-			nodeId: this.nodeId,
-			upstreamNodeId: this.upstreamNodeId
+			upstreamNodeId: this.upstreamNodeId,
+			downstreamNodeCount: count
 		};
 	}
 
@@ -36,24 +42,39 @@ module.exports = class ManagerHandler
 		this.upstreamSocket = socket;
 
 		socket.send(JSON.stringify({
-			user_id: this.nodeId,
 			handler: this.handlerName,
-			cmd: 'nodeId',
+			userId: this.nodeId,
+			cmd: 'getNodeId',
 			back: this.nodeId
 		}));
 	}
 
-	onResponseTrans(res) 
+	onUpResponseTrans(res, socket) 
 	{
-		if (res.back === this.nodeId) {
-			console.log(res);
-			this.upstreamNodeId = res.nodeId;
-			return null;
-		}
+		switch (res.cmd) {
+			case 'getNodeId':
+				if (res.to === this.nodeId) {
+					this.upstreamNodeId = res.nodeId;
+				}
+				return null;
 
-		if (res.cmd === 'nodeInfos') {
-			res.nodes.push(this.nodeInfos());
-			return res;
+			case 'report':
+				let infos = this.nodeInfos();
+				res.nodes.push(infos);
+
+				socket.send( JSON.stringify({
+					handler: this.handlerName,
+					userId: this.nodeId,
+					cmd: 'report',
+					to: 'center',
+					infos: infos
+				}));
+
+				console.log('onUpResponseTrans', JSON.stringify(res.infos));
+
+				return res;
+
+			default:
 		}
 
 		return res;
@@ -70,7 +91,7 @@ module.exports = class ManagerHandler
 			return;
 		}
 
-		let newRes = this.onResponseTrans(res);
+		let newRes = this.onUpResponseTrans(res, socket);
 		if (newRes === null) {
 			return;
 		}
@@ -87,32 +108,42 @@ module.exports = class ManagerHandler
 
 	onDownRequest (socket, req) 
 	{
-		console.log(req);
-
 		if (typeof req.to === 'undefined') {
 			req.to = this.nodeId;
+		}
+
+		if (req.to === 'center') {
+			if (this.isCenter) {
+				req.to = this.nodeId;
+			}
 		}
 
 		if (req.to !== this.nodeId) {
 			if (typeof req.crumbs === 'undefined') {
 				req.crumbs = [];
 			}
-			req.crumbs.push(req.user_id);
-			req.user_id = this.nodeId;
+			req.crumbs.push(req.userId);
+			req.userId = this.nodeId;
 			this.upstreamSocket.send(JSON.stringify(req));
 			return;
 		}
 
-		 switch (req.cmd) {
-		 	case 'nodeId':
+		switch (req.cmd) {
+			case 'getNodeId':
+				console.log(req);
 				let res = {nodeId: this.nodeId};
 				if (req.back) {
-					res.back = req.back;
+					res.to = req.back;
 				}
+				socket.isNode = true;
 				socket.send(JSON.stringify(res));
 				return;
+
+			case 'report':
+				this.edgeNodes.push(req.infos);
+				return;
 			default:
-		 }
+		}
 
 	}
 };

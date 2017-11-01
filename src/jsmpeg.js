@@ -3,12 +3,14 @@ var JSMpeg =
 	config: {
 		mjpegFrameInterval: 1000,
 		videoMode : 'mpeg1',
+		mjpegTimeQueLength: 50,
+		mpeg1TimeQueLength: 50
 	},
 
 	infos : {
 		mjpegTime : [],
 		mpeg1Time : [],
-		nodeTree: []
+		reports: null
 
 	},
 
@@ -19,7 +21,7 @@ var JSMpeg =
 
 			var req = {
 				handler: mode,
-				user_id: userid(),
+				userId: userid(),
 				cmd: 'active',
 				param: true
 			};
@@ -46,7 +48,7 @@ var JSMpeg =
 		source.conn_id = Math.floor(Math.random() * 1000);
 		source.send(JSON.stringify({
 			handler: JSMpeg.config.videoMode,
-			user_id: userid(),
+			userId: userid(),
 			cmd: 'active',
 			param: true
 		}));
@@ -74,11 +76,17 @@ var JSMpeg =
 		var payload = {
 			handler: 'mpeg1',
 			cmd: 'intra',
-			user_id: userid(),
+			userId: userid(),
 			intra_crc32 : crc32(cb),
 			intra_interval : interval_time,
 			close_when_delay : 0
 		};
+
+		var timeQue = JSMpeg.infos.mpeg1Time;
+		timeQue.unshift(interval_time);
+		if (timeQue.length > JSMpeg.config.mpeg1TimeQueLength) {
+			timeQue.pop();
+		}
 
 		source.send(JSON.stringify(payload));
 		console.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
@@ -89,12 +97,18 @@ var JSMpeg =
 		if (JSMpeg.config.videoMode === 'mjpeg') {
 			setTimeout(function(){
 				source.send(JSON.stringify({
-					user_id: userid(),
+					userId: userid(),
 					handler: 'mjpeg',
 					cmd: 'interval',
 					renderTime: renderTime,
 				}));
 			}, JSMpeg.config.mjpegFrameInterval);
+		}
+
+		var timeQue = JSMpeg.infos.mjpegTime;
+		timeQue.unshift(renderTime);
+		if (timeQue.length > JSMpeg.config.mjpegTimeQueLength) {
+			timeQue.pop();
 		}
 	},
 

@@ -6,17 +6,19 @@ const WebSocket = require('ws');
 const machineIdSync = require('node-machine-id').machineIdSync;
 const crypto = require('crypto');
 const NodeCache = require('node-cache');
+const os = require('os');
 
 const UPSTREAM_RECONNECT_INTERVAL = 300;
 
 module.exports = class WebSocketHub 
 {
-	constructor(port) 
+	constructor(config) 
 	{
+		this.config = config;
 		this.handlers = new Array();
 		this.handlerClass = new Array();
 		this.env = new Map(); 
-		this.port = port;
+		this.port = config.port;
 
 		let app = express();
 		app.use(express.static('public'));
@@ -64,30 +66,68 @@ module.exports = class WebSocketHub
 			console.log('Listening on %d', this.port);
 		}.bind(this));
 
+		this.env.set('config', this.config);
 		this.env.set('server', this.socketServer);
 		this.env.set('eachClient', this.eachClient.bind(this));
 		this.env.set('nodeId', this.getNodeId());
 		this.env.set('newCache', this.newCache.bind(this));
 		this.env.set('isCenter', true);
 		this.env.set('nodeInfos', this.infos.bind(this));
+		this.env.set('getNodeUrls', this.getLocalUrls.bind(this));
 	}
 
-	infos () {
-		let meInfo = {
-			module: 'node',
+	infos () 
+	{
+		let results = {
 			nodeId: this.env.get('nodeId'),
-			upstreamUrl: this.env.get('upstreamUrl')
+			config: this.env.get('config'),
+			nodeUrls: this.getLocalUrls(this.port),
+			upstreamUrl: this.env.get('upstreamUrl'),
+			wsClientCount: this.socketServer.connectionCount
 		};
-
-		let results = [meInfo];
 
 		this.handlers.forEach(function(handler) {
 			if (typeof handler.infos === "function") { 
-				results.push(handler.infos());
+				let modRes = handler.infos();
+				for (var key in modRes) {
+					results[key] = modRes[key];
+				}
 			}
 		});
 
 		return results;
+	}
+
+	getLocalUrls(port) 
+	{
+		var ifs = os.networkInterfaces();
+		let deleteKeys = [];
+		for (var key in ifs) {
+			if (key === 'lo') { 
+				deleteKeys.push(key);
+				continue;
+			}
+
+			if (/^tun/.test(key)) {
+				deleteKeys.push(key);
+			}
+		}
+		deleteKeys.forEach(function each(key){
+			delete ifs[key];
+		});
+
+
+		var address = new Array();
+		for (var key in ifs) {
+			let item = ifs[key];
+			item.forEach(function each(obj) {
+       				if (obj.family === 'IPv4') {
+					let url = 'ws://' + obj.address + ':' + port;
+					address.push(url);
+				}
+			});
+		}
+		return address;
 	}
 
 	newCache (options)
@@ -131,7 +171,7 @@ module.exports = class WebSocketHub
 			do {
 				if (typeof handler.onDownRequest !== "function") break;
 				if (!req.hasOwnProperty('cmd')) break;
-				if (!req.hasOwnProperty('user_id')) break;
+				if (!req.hasOwnProperty('userId')) break;
 				handler.onDownRequest(socket, req);
 			} while (false);
 			return true;
@@ -163,8 +203,10 @@ module.exports = class WebSocketHub
 		});
 	}
 
-	run (url = null) 
+	run () 
 	{
+		let url = this.config.upstreamUrl;
+
 		if (url) {
 			this.env.set('isCenter', false);
 			this.env.set('upstreamUrl', url);
@@ -183,12 +225,12 @@ module.exports = class WebSocketHub
 	{
 		let handlers = this.handlers;
 		this.wsClient(url, interval, function recv(data){
-			var socket = this;
+			var client = this;
 
 			if (data === null) {
 				handlers.forEach(function(handler) {
 					if (typeof handler.onUpConnect === "function") { 
-						handler.onUpConnect(socket);
+						handler.onUpConnect(client.socket);
 					}
 				});
 				return;
@@ -210,7 +252,7 @@ module.exports = class WebSocketHub
 				}
 
 				if (signs.includes(handler.chunkHead)) {
-					handler.onUpResponse (data, socket);
+					handler.onUpResponse (data, client.socket);
 				}
 			}, this);
 		});

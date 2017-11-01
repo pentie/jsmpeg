@@ -13,5 +13,23 @@
 </head>
 <body>
 	<div class="jsmpeg" data-url="" data-start="mjpeg" data-disable-gl="false" ></div>
+	<script>
+
+var counter = 0;
+var switchCounter = 10;
+var currentMode = 'mjpeg';
+
+function event_infos_callback( infos, config ) 
+{
+	counter++;
+
+	if (counter % switchCounter === 0) {
+		currentMode = (currentMode === 'mjpeg')? 'mpeg1' : 'mjpeg';
+		config.videoMode = currentMode;
+		console.log(infos, config);
+	}
+}
+
+	</script>
 </body>
 </html>

@@ -16,9 +16,8 @@ module.exports = class MJpegHandler
 	{
 		let activeCount = this.cache.keys().length;
 		return {
-			module: this.handlerName,
-			clientCount: activeCount,
-			playCount: activeCount
+			mjpegClientCount: activeCount,
+			mjpegActiveCount: activeCount
 		};
 	}
 
@@ -27,7 +26,7 @@ module.exports = class MJpegHandler
 		let nowTime = Date.now();
 
 		socket.send(JSON.stringify({
-			user_id: this.nodeId,
+			userId: this.nodeId,
 			handler: this.handlerName,
 			cmd: cmd,
 			req_time: nowTime - this.upstreamLastTime,
@@ -70,8 +69,8 @@ module.exports = class MJpegHandler
 
 	onDownRequest (socket, req) 
 	{
-		let user_id = req.user_id;
-		this.cache.set(user_id, Date.now(), 5);
+		let userId = req.userId;
+		this.cache.set(userId, Date.now(), 5);
 
 		 switch (req.cmd) {
 		 	case 'active':

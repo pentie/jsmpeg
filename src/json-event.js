@@ -7,8 +7,19 @@ var JsonMsg = function(options) {
 };
 
 JsonMsg.prototype.write = function(buffer) {
-	var infos = JSON.parse(buffer);
-	console.log(infos);
+	JSMpeg.infos.reports = JSON.parse(buffer);
+	delete JSMpeg.infos.reports.cmd;
+
+	if (typeof event_infos_callback === "function") { 
+
+		var oldMode = JSMpeg.config.videoMode;
+
+		event_infos_callback (JSMpeg.infos, JSMpeg.config);
+
+		if (JSMpeg.config.videoMode !== oldMode) {
+			JSMpeg.switch_video_mode(JSMpeg.config.videoMode);
+		}
+	}
 };
 
 return JsonMsg;

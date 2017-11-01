@@ -15,7 +15,7 @@ class GifsHandler
 		let nowTime = Date.now();
 
 		socket.send(JSON.stringify({
-			user_id: this.nodeId,
+			userId: this.nodeId,
 			handler: this.handlerName,
 			cmd: 'active',
 			req_time: nowTime - this.upstreamLastTime,
@@ -49,7 +49,7 @@ class GifsHandler
 	}
 
 	onDownRequest (socket, req) {
-		let user_id = req.user_id;
+		let userId = req.userId;
 		 switch (req.cmd) {
 		 	case 'active':
 			case 'interval':
