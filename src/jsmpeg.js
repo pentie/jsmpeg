@@ -4,7 +4,8 @@ var JSMpeg =
 		mjpegFrameInterval: 1000,
 		videoMode : 'mpeg1',
 		mjpegTimeQueLength: 50,
-		mpeg1TimeQueLength: 50
+		mpeg1TimeQueLength: 50,
+		connectionId: 0
 	},
 
 	infos : {
@@ -21,7 +22,7 @@ var JSMpeg =
 
 			var req = {
 				handler: mode,
-				userId: userid(),
+				userId: JSMpeg.userid(),
 				cmd: 'active',
 				param: true
 			};
@@ -46,9 +47,11 @@ var JSMpeg =
 	on_source_opened: function (source) 
 	{
 		source.conn_id = Math.floor(Math.random() * 1000);
+		JSMpeg.config.connectionId = source.conn_id;
+
 		source.send(JSON.stringify({
 			handler: JSMpeg.config.videoMode,
-			userId: userid(),
+			userId: JSMpeg.userid(),
 			cmd: 'active',
 			param: true
 		}));
@@ -76,7 +79,7 @@ var JSMpeg =
 		var payload = {
 			handler: 'mpeg1',
 			cmd: 'intra',
-			userId: userid(),
+			userId: JSMpeg.userid(),
 			intra_crc32 : crc32(cb),
 			intra_interval : interval_time,
 			close_when_delay : 0
@@ -97,7 +100,7 @@ var JSMpeg =
 		if (JSMpeg.config.videoMode === 'mjpeg') {
 			setTimeout(function(){
 				source.send(JSON.stringify({
-					userId: userid(),
+					userId: JSMpeg.userid(),
 					handler: 'mjpeg',
 					cmd: 'interval',
 					renderTime: renderTime,
@@ -110,6 +113,40 @@ var JSMpeg =
 		if (timeQue.length > JSMpeg.config.mjpegTimeQueLength) {
 			timeQue.pop();
 		}
+	},
+
+	userid: function ()
+	{
+		function set_cookie(cname,cvalue,exdays)
+		{
+			var d = new Date();
+			d.setTime(d.getTime()+(exdays*24*60*60*1000));
+			var expires = "expires="+d.toGMTString();
+			document.cookie = cname + "=" + cvalue + "; " + expires;
+		}
+
+		function get_cookie(cname)
+		{
+			var name = cname + "=";
+			var ca = document.cookie.split(';');
+			for(var i=0; i<ca.length; i++) 
+			{
+				var c = ca[i].trim();
+				if (c.indexOf(name)==0) return c.substring(name.length,c.length);
+			}
+			return "";
+		}
+
+		var id = get_cookie('id');
+		if (id === '') {
+			id = 'xxyxxyxxyxxyxxyx'.replace(/[xy]/g, function(c) {
+				var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+				return v.toString(16);
+			});
+
+			set_cookie('id', id, 365);
+		}
+		return id;
 	},
 
 	Player: null,

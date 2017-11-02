@@ -9,23 +9,30 @@
 	</style>
 	
 	<script type="text/javascript" src="jsmpeg.min.js"></script>
-	<script type="text/javascript" src="functions.js"></script>
 </head>
 <body>
 	<div class="jsmpeg" data-url="" data-start="mjpeg" data-disable-gl="false" ></div>
 	<script>
 
 var counter = 0;
-var switchCounter = 10;
 var currentMode = 'mjpeg';
 
 function event_infos_callback( infos, config ) 
 {
 	counter++;
 
-	if (counter % switchCounter === 0) {
+	if (counter % 10 === 0) {
 		currentMode = (currentMode === 'mjpeg')? 'mpeg1' : 'mjpeg';
 		config.videoMode = currentMode;
+
+		console.log('switch to: ', currentMode); 
+		console.log(infos, config);
+	}
+
+	if (counter % 17 === 0) {
+		config.connectionId = 0;
+
+		console.log('force reconnect'); 
 		console.log(infos, config);
 	}
 }

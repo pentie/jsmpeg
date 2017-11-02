@@ -70,8 +70,6 @@ module.exports = class ManagerHandler
 					infos: infos
 				}));
 
-				console.log('onUpResponseTrans', JSON.stringify(res.infos));
-
 				return res;
 
 			default:

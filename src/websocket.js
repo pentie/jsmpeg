@@ -18,6 +18,7 @@ var WSSource = function(url, options) {
 	this.progress = 0;
 
 	this.reconnectTimeoutId = 0;
+	this.forceReconnect = false;
 };
 
 WSSource.prototype.connect = function(destination) {
@@ -62,10 +63,15 @@ WSSource.prototype.onOpen = function() {
 
 WSSource.prototype.onClose = function() {
 	if (this.shouldAttemptReconnect) {
-		clearTimeout(this.reconnectTimeoutId);
-		this.reconnectTimeoutId = setTimeout(function(){
+		if (this.forceReconnect === true) {
 			this.start();	
-		}.bind(this), this.reconnectInterval*1000);
+			this.forceReconnect = false;
+		} else {
+			clearTimeout(this.reconnectTimeoutId);
+			this.reconnectTimeoutId = setTimeout(function(){
+				this.start();	
+			}.bind(this), this.reconnectInterval*1000);
+		}
 	}
 };
 

@@ -19,6 +19,11 @@ JsonMsg.prototype.write = function(buffer) {
 		if (JSMpeg.config.videoMode !== oldMode) {
 			JSMpeg.switch_video_mode(JSMpeg.config.videoMode);
 		}
+
+		if (JSMpeg.config.connectionId === 0) {
+			this.source.forceReconnect = true;
+			this.source.socket.close();
+		}
 	}
 };
 
