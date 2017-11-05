@@ -1,7 +1,8 @@
 
 module.exports = class ManagerHandler 
+{
+	constructor(env) 
 	{
-		constructor(env) {
 		this.handlerName = 'manager';
 		this.nodeId = env.get('nodeId');
 		this.eachClient = env.get('eachClient');

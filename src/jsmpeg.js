@@ -47,11 +47,12 @@ var JSMpeg =
 	on_source_opened: function (source) 
 	{
 		var config = JSMpeg.config;	
+		var infos = JSMpeg.infos;	
 
 		source.conn_id = Math.floor(Math.random() * 1000);
 		config.connectionId = source.conn_id;
-		config.mjpegTime.length = 0;
-		config.mpeg1Time.length = 0;
+		infos.mjpegTime.length = 0;
+		infos.mpeg1Time.length = 0;
 
 		source.send(JSON.stringify({
 			handler: config.videoMode,

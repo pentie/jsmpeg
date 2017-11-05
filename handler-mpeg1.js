@@ -1,5 +1,5 @@
 
-var mpeg1video_chunk = require('./ffmpeg-utils.js').mpeg1video_chunk;
+const {Mpeg1tsFromJpegs} = require('./base.js');
 
 const DEFAULT_QSCALE = 8;
 const MAX_EXPIRE_TIME = 3600;
@@ -14,7 +14,8 @@ module.exports = class Mpeg1VideoHandler
 		this.eachClient = env.get('eachClient');
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
-		this.chunker = mpeg1video_chunk(this.downstream.bind(this), DEFAULT_QSCALE);
+		this.chunker = new Mpeg1tsFromJpegs( this.downstream.bind(this), DEFAULT_QSCALE );
+		this.chunker.start();
 	}
 
 	infos () 
@@ -49,7 +50,7 @@ module.exports = class Mpeg1VideoHandler
 
 	feed (chunk) 
 	{
-		this.chunker(chunk);
+		this.chunker.write(chunk);
 	}
 
 	downstream (chunk) 

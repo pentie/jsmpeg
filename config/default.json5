@@ -1,0 +1,43 @@
+{
+	source: {
+		usbCamera: {
+			caption: 'Local usb camera',
+			src: [ '/dev/video0' ]
+		},
+
+		webCamera: {
+			caption: 'Video from webcamera',
+			src: [ 'http://127.0.0.1:8083/?action=stream' ]
+		},
+
+		localMp4: {
+			autoStart: true,
+			caption: 'Local mp4 playlist',
+			loop: 'yes',  // no
+			order: 'asc', // desc, random. filename as 1-name.mp4
+			src: [ 'public/media' ]		
+		},
+	},
+
+
+	centerNode: {
+		port: 8080,
+		mpeg1MaxUser: 20,
+		mjpegMaxUser: 200,
+		heartBeatInterval: 1000,
+	},
+
+	relaysNodes: [{
+		active: true,
+		port: 8081,
+		mpeg1MaxUser: 20,
+		mjpegMaxUser: 200,
+		upstreamUrl: 'ws://localhost:8080'
+	    },{
+		active: true,
+		port: 8082,
+		mpeg1MaxUser: 20,
+		mjpegMaxUser: 200,
+		upstreamUrl: 'ws://localhost:8080'
+	}],
+}

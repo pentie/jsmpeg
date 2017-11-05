@@ -7,19 +7,32 @@ const machineIdSync = require('node-machine-id').machineIdSync;
 const crypto = require('crypto');
 const NodeCache = require('node-cache');
 const os = require('os');
+const fork = require('child_process').fork;
 
 const UPSTREAM_RECONNECT_INTERVAL = 300;
 
 module.exports = class WebSocketHub 
 {
-	constructor(config) 
+	constructor(configs) 
 	{
-		this.config = config;
+		this.configs = configs;
 		this.handlers = new Array();
 		this.handlerClass = new Array();
-		this.env = new Map(); 
-		this.port = config.port;
+		this.sources = new Array();
+		this.sourcerClass = new Array();
 
+		this.env = new Map(); 
+		this.env.set('feed', this.feed.bind(this));
+		this.env.set('configs', this.configs);
+		this.env.set('eachClient', this.eachClient.bind(this));
+		this.env.set('nodeId', this.getNodeId());
+		this.env.set('newCache', this.newCache.bind(this));
+		this.env.set('nodeInfos', this.infos.bind(this));
+		this.env.set('getNodeUrls', this.getLocalUrls.bind(this));
+	}
+
+	startServer(port)
+	{
 		let app = express();
 		app.use(express.static('public'));
 		app.use(function (req, res) {
@@ -62,25 +75,49 @@ module.exports = class WebSocketHub
 
 		}).bind(this));
 
-		this.webServer.listen(this.port, function listening() {
-			console.log('Listening on %d', this.port);
+		this.webServer.listen(port, function listening() {
+			console.log('Listening on %d', port);
 		}.bind(this));
 
-		this.env.set('config', this.config);
 		this.env.set('server', this.socketServer);
-		this.env.set('eachClient', this.eachClient.bind(this));
-		this.env.set('nodeId', this.getNodeId());
-		this.env.set('newCache', this.newCache.bind(this));
-		this.env.set('isCenter', true);
-		this.env.set('nodeInfos', this.infos.bind(this));
-		this.env.set('getNodeUrls', this.getLocalUrls.bind(this));
+	}
+
+	static relaysSupervisor (allConfigs) 
+	{
+		let configs = allConfigs.get('relaysNodes');
+
+		for (var index in configs) {
+			let config = configs[index];
+			if (config.active !== true) {
+				continue;
+			}
+			let subRelay = fork(process.argv[1], ['--index', index], {silent: true});
+			subRelay.index = index;
+			subRelay.stdout.on('data', function(data) {
+				console.log('stdout('+subRelay.index+'): ', data.toString().trim());
+			});
+		}
+	}
+
+	loadSourcers ()
+	{
+		this.sourcerClass.forEach(function (Sourcer) {
+			this.sources.push(new Sourcer(this.env));
+		}.bind(this));
+	}
+
+	loadHandlers ()
+	{
+		this.handlerClass.forEach(function (Handler) {
+			this.handlers.push(new Handler(this.env));
+		}.bind(this));
 	}
 
 	infos () 
 	{
 		let results = {
 			nodeId: this.env.get('nodeId'),
-			config: this.env.get('config'),
+			config: this.config,
 			nodeUrls: this.getLocalUrls(this.port),
 			upstreamUrl: this.env.get('upstreamUrl'),
 			wsClientCount: this.socketServer.connectionCount
@@ -178,6 +215,11 @@ module.exports = class WebSocketHub
 		});
 	}
 
+	addSourcer (Sourcer) 
+	{
+		this.sourcerClass.push(Sourcer);
+	}
+
 	addHandler (Handler) 
 	{
 		this.handlerClass.push(Handler);
@@ -203,21 +245,24 @@ module.exports = class WebSocketHub
 		});
 	}
 
-	run () 
+	run (index) 
 	{
-		let url = this.config.upstreamUrl;
+		if (index === undefined) {
+			this.config = this.configs.get('centerNode');
+			this.env.set('isCenter', true);
 
-		if (url) {
+			this.startServer(this.config.port);
+			this.loadHandlers();
+			this.loadSourcers();
+		} else {
+			this.config = this.configs.get('relaysNodes')[parseInt(index)];
 			this.env.set('isCenter', false);
-			this.env.set('upstreamUrl', url);
-		}
+			this.env.set('upstreamUrl', this.config.upstreamUrl);
 
-		this.handlerClass.forEach(function (Handler) {
-			this.handlers.push(new Handler(this.env));
-		}.bind(this));
+			this.startServer(this.config.port);
+			this.loadHandlers();
 
-		if (url) {
-			this.upstream(url);
+			this.upstream(this.config.upstreamUrl);
 		}
 	}
 
