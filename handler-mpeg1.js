@@ -67,7 +67,7 @@ module.exports = class Mpeg1VideoHandler
 
 	onDownRequest (socket, req) 
 	{
-		console.log(req);
+		//console.log(req);
 
 		let userId = req.userId;
 		 
@@ -84,7 +84,7 @@ module.exports = class Mpeg1VideoHandler
 				let spec_timeout = req.close_when_delay;
 				let new_req = [key, Date.now(), spec_timeout, intra_interval, socket];
 				
-				console.log(userId, key, intra_interval);
+				//console.log(userId, key, intra_interval);
 				break;
 
 			default:
