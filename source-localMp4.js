@@ -50,6 +50,21 @@ module.exports = class LocalMp4Source
 			});
 			allFiles = allFiles.concat(files);
 		});
+		
+		function shuffleArray (array){
+			for (var i = array.length - 1; i > 0; i--) {
+				var rand = Math.floor(Math.random() * (i + 1));
+				[array[i], array[rand]]=[array[rand], array[i]];
+			}
+		}
+
+		switch (this.config.order) {
+		    case 'asc': allFiles.sort(); break;
+		    case 'desc': allFiles.reverse(); break;
+		    case 'random': shuffleArray( allFiles ); break;
+		    default: allFiles.sort();
+		}
+
 		return allFiles;
 	}
 

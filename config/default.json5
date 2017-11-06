@@ -14,7 +14,7 @@
 			autoStart: true,
 			caption: 'Local mp4 playlist',
 			loop: 'yes',  // no
-			order: 'asc', // desc, random. filename as 1-name.mp4
+			order: 'random', // asc, desc, random
 			src: [ 'public/media' ]		
 		},
 	},
