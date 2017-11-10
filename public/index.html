@@ -11,14 +11,16 @@
 	<script type="text/javascript" src="jsmpeg.min.js"></script>
 </head>
 <body>
-	<div class="jsmpeg" data-url="" data-start="mjpeg" data-disable-gl="false" ></div>
+	<div class="jsmpeg" data-url="" data-start="mpeg1" data-disable-gl="false" ></div>
 	<script>
 
 var counter = 0;
-var currentMode = 'mjpeg';
+var currentMode = 'mpeg1';
 
 function event_infos_callback( infos, config ) 
 {
+	return;
+
 	counter++;
 
 	if (counter % 10 === 0) {

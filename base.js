@@ -47,11 +47,16 @@ class MjpegStreamToJpegs
 
 class ChunksFromFFmpegBase
 {
-	constructor( chunksCallback ) 
+	constructor( config, chunksCallback ) 
 	{
+		this.config = config;
 		this.output = new PassThroughStream();
 		this.output.on('data', chunksCallback );
 		this.output.on('error', this.onError.bind(this));
+	}
+
+	onFFmpegStart( cmdline ) {
+		console.log( this.constructor.name, cmdline);
 	}
 
 	onFFmepgEnd () {
@@ -60,15 +65,18 @@ class ChunksFromFFmpegBase
 
 	onError (err) {
 		console.log( this.constructor.name, 'error occurred: ' + err.message);
+		if (this.constructor.name === 'JpegsFromMp4File') {
+			console.log(this.mp4File);
+		}
 	}
 }
 
 class JpegsFromFFmpegBase extends ChunksFromFFmpegBase
 {
-	constructor( jpegsCallback ) 
+	constructor( config, jpegsCallback ) 
 	{
 		let extractor = new MjpegStreamToJpegs( jpegsCallback );
-		super( function(chunk) {
+		super( config, function(chunk) {
 			extractor.checkpoint(chunk);
 		});
 	}
@@ -76,24 +84,28 @@ class JpegsFromFFmpegBase extends ChunksFromFFmpegBase
 
 class JpegsFromMp4File extends JpegsFromFFmpegBase
 {
-	constructor( mp4File, jpegsCallback, endCallback ) 
+	constructor( config, mp4File, jpegsCallback, endCallback ) 
 	{
-		super(jpegsCallback);
+		super(config, jpegsCallback);
 		this.mp4File = mp4File;
 		this.endCallback = endCallback;
 	}
 
-	start () 
+	start( callback ) 
 	{
+		callback = callback || this.onFFmpegStart.bind(this);
 		this.command = ffmpeg()
 			.input( this.mp4File )
 			.native()
 			.output( this.output )
-			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
-			.outputFps(30)
+			.outputOptions([ '-f mjpeg', '-c:v mjpeg' ])
+			.videoFilters( this.config.filter )
+			.size( this.config.size )
+			.on('start', callback)
 			.on('error', this.onError.bind(this))
-			.on('end', this.endCallback )
-			.run();
+			.on('end', this.endCallback );
+
+		this.command.run();
 		return this;
 	}
 
@@ -104,22 +116,25 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 
 class JpegsFromWebCamera extends JpegsFromFFmpegBase
 {
-	constructor( url, jpegsCallback ) 
+	constructor( config, url, jpegsCallback ) 
 	{
-		super(jpegsCallback);
+		super(config, jpegsCallback);
 		this.url = url;
 	}
 
-	start () 
+	start (callback) 
 	{
+		callback = callback || this.onFFmpegStart.bind(this);
 		this.command = ffmpeg()
 			.input(this.url)
 			.output(this.output)
-			.outputOptions(['-f mjpeg', '-c:v copy'])
-			.outputFps(30)
+			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
+			.videoFilters( this.config.filter )
+			.size( this.config.size )
+			.on('start', callback)
 			.on('error', this.onError.bind(this))
-			.on('end', this.onFFmepgEnd.bind(this))
-			.run();
+			.on('end', this.onFFmepgEnd.bind(this));
+		this.command.run();
 		return this;
 	}
 
@@ -130,23 +145,28 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 
 class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 {
-	constructor( devPath, jpegsCallback ) 
+	constructor( config, devPath, jpegsCallback ) 
 	{
-		super( jpegsCallback );
+		super( config, jpegsCallback );
 		this.devPath = devPath;
+		this.command = null;
 	}
 
-	start () 
+	start( callback ) 
 	{
+		callback = callback || this.onFFmpegStart.bind(this);
 		this.command = ffmpeg()
 			.input(this.devPath)
 			.inputOptions( ['-f v4l2', '-input_format mjpeg'] )
 			.output(this.output)
-			.outputOptions(['-f mjpeg', '-c:v copy'])
-			.outputFps(30)
+			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
+			.videoFilters( this.config.filter )
+			.size( this.config.size )
+			.on('start', callback)
 			.on('error', this.onError.bind(this))
-			.on('end', this.onFFmepgEnd.bind(this))
-			.run();
+			.on('end', this.onFFmepgEnd.bind(this));
+
+		this.command.run();
 		return this;
 	}
 
@@ -157,9 +177,9 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 
 class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
 {
-	constructor( mpegtsCallback, qscale=8 ) 
+	constructor( config, mpegtsCallback, qscale=8 ) 
 	{
-		super( mpegtsCallback );
+		super( config, mpegtsCallback );
 		this.qscale = qscale;
 		
 		this.input = new PassThroughStream();
@@ -170,17 +190,20 @@ class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
 		this.input.write(chunk);	
 	}
 
-	start () 
+	start( callback ) 
 	{
+		callback = callback || this.onFFmpegStart.bind(this);
 		this.command = ffmpeg()
 			.input(this.input)
 			.inputFormat('mjpeg')
 			.output(this.output)
 			.outputOptions(['-f mpegts', '-c:v mpeg1video', '-q:v '+ this.qscale, '-bf 0'])
 			.outputFps(30)
+			.on('start', callback)
 			.on('error', this.onError.bind(this))
-			.on('end', this.onFFmepgEnd.bind(this))
-			.run();
+			.on('end', this.onFFmepgEnd.bind(this));
+
+		this.command.run();
 		return this;
 	}
 

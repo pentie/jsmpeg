@@ -14,7 +14,7 @@ module.exports = class Mpeg1VideoHandler
 		this.eachClient = env.get('eachClient');
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
-		this.chunker = new Mpeg1tsFromJpegs( this.downstream.bind(this), DEFAULT_QSCALE );
+		this.chunker = new Mpeg1tsFromJpegs( null, this.downstream.bind(this), DEFAULT_QSCALE );
 		this.chunker.start();
 	}
 

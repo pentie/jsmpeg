@@ -9,7 +9,9 @@ module.exports = class ManagerHandler
 		this.chunkHead = 0x7b;	
 		this.upstreamSocket = null;
 		this.isCenter = env.get('isCenter');
-		this.nodeInfos = env.get('nodeInfos');
+		this.handlerInfos = env.get('handlerInfos');
+		this.sourcerInfos = env.get('sourcerInfos');
+		this.activeSource = env.get('activeSource');
 		this.isCenter && setInterval(this.heartbeat.bind(this), 1000);
 		this.edgeNodes = [];
 	}
@@ -18,7 +20,7 @@ module.exports = class ManagerHandler
 	{
 		this.downstream( JSON.stringify({
 			cmd: 'report',
-			nodes: [ this.nodeInfos() ],
+			nodes: [ this.handlerInfos() ],
 			edgeNodes: this.edgeNodes
 		}));
 
@@ -60,7 +62,7 @@ module.exports = class ManagerHandler
 				return null;
 
 			case 'report':
-				let infos = this.nodeInfos();
+				let infos = this.handlerInfos();
 				res.nodes.push(infos);
 
 				socket.send( JSON.stringify({
@@ -129,21 +131,63 @@ module.exports = class ManagerHandler
 
 		switch (req.cmd) {
 			case 'getNodeId':
-				console.log(req);
-				let res = {nodeId: this.nodeId};
+				let res = {
+					status: 'ok',
+					cmd: req.cmd, 
+					nodeId: this.nodeId
+				};
 				if (req.back) {
 					res.to = req.back;
 				}
 				socket.isNode = true;
 				socket.send(JSON.stringify(res));
-				return;
+				break;
 
 			case 'report':
 				this.edgeNodes.push(req.infos);
-				return;
+				break;
+
+			case 'getSourceList':
+				if (!this.accessValid(req)) {
+					break;
+				}
+
+				socket.send(JSON.stringify({
+					status: 'ok',
+					cmd: req.cmd, 
+					nodeId: this.nodeId,
+					list:  this.sourcerInfos(),
+				}));
+				break;
+
+			case 'selectSource':
+				console.log('selectSource', req);
+				if (!this.accessValid(req)) {
+					break;
+				}
+
+				this.activeSource( req, function( cmdline ){
+					if (cmdline === null) {
+						console.log('source start error: parma error');
+						return;
+					}
+					console.log('selectSource', cmdline);
+					socket.send(JSON.stringify({
+						status: 'ok',
+						cmd: req.cmd, 
+						nodeId: this.nodeId,
+						cmdline: cmdline
+					}));
+				});
+				break;
+
 			default:
 		}
+	}
 
+	accessValid( req ) 
+	{
+		return true;
 	}
 };
 

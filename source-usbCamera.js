@@ -8,17 +8,34 @@ module.exports = class UsbCameraSource
 		this.sourceName = 'usbCamera';
 		this.feed = env.get('feed');
 		this.config = env.get('configs').get('source.' + this.sourceName);
+		this.size = this.config.size;
 		this.active = false;
 
 		if (this.config.autoStart === true) {
-			this.start(this.config.src[0]);
+			this.start( {devPath: this.config.src[0] });
 		}
 	}
 
-	start( devPath )
+	list() 
 	{
-		this.source = new JpegsFromUsbCamera( devPath, this.feedProxy.bind(this) );
-		this.source.start();
+		return {
+			name: this.sourceName,
+			caption: this.config.caption,
+			active: this.active,
+			src: this.config.src
+		};
+	}
+
+	start( cmdObj, callback )
+	{
+		let devPath = cmdObj.devPath;
+		if (!devPath) {
+			callback(null);
+			return;
+		}
+
+		this.source = new JpegsFromUsbCamera( this.config, devPath, this.feedProxy.bind(this) );
+		this.source.start( callback );
 		this.active = true;
 	}
 
@@ -40,11 +57,6 @@ module.exports = class UsbCameraSource
 	stop ()
 	{
 		this.active = false;
-		this.source.stop();
-	}
-
-	infos () 
-	{
-
+		this.source && this.source.stop();
 	}
 };

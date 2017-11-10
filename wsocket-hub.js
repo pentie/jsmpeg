@@ -27,7 +27,9 @@ module.exports = class WebSocketHub
 		this.env.set('eachClient', this.eachClient.bind(this));
 		this.env.set('nodeId', this.getNodeId());
 		this.env.set('newCache', this.newCache.bind(this));
-		this.env.set('nodeInfos', this.infos.bind(this));
+		this.env.set('handlerInfos', this.handlerInfos.bind(this));
+		this.env.set('sourcerInfos', this.sourcerInfos.bind(this));
+		this.env.set('activeSource', this.activeSource.bind(this));
 		this.env.set('getNodeUrls', this.getLocalUrls.bind(this));
 	}
 
@@ -99,6 +101,19 @@ module.exports = class WebSocketHub
 		}
 	}
 
+	activeSource( cmdObj, callback )
+	{
+		let targetSource = cmdObj.sourceName;
+		this.sources.forEach(function(source) {
+			source.stop();
+			if (source.sourceName === targetSource) {
+				setImmediate( function(){
+					source.start( cmdObj, callback );
+				});
+			}
+		});
+	}
+
 	loadSourcers ()
 	{
 		this.sourcerClass.forEach(function (Sourcer) {
@@ -113,7 +128,18 @@ module.exports = class WebSocketHub
 		}.bind(this));
 	}
 
-	infos () 
+	sourcerInfos()
+	{
+		let results = [];
+		this.sources.forEach(function(sourcer) {
+			if (typeof sourcer.list === "function") { 
+				results.push( sourcer.list() );
+			}
+		});
+		return results;
+	}
+
+	handlerInfos() 
 	{
 		let results = {
 			nodeId: this.env.get('nodeId'),

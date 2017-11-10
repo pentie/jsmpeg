@@ -2,23 +2,37 @@
 	source: {
 		usbCamera: {
 			caption: 'Local usb camera',
+			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
+			size: '1280x720',
 			src: [ '/dev/video0' ]
 		},
 
 		webCamera: {
 			caption: 'Video from webcamera',
+			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
+			size: '1280x720',
 			src: [ 'http://127.0.0.1:8083/?action=stream' ]
 		},
 
 		localMp4: {
-			autoStart: true,
+			autoStart: true, // only one item should be set to true
 			caption: 'Local mp4 playlist',
-			loop: 'yes',  // no
+			filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
+			size: '1280x720',
+			loop: 'yes',  // yes, no
 			order: 'random', // asc, desc, random
 			src: [ 'public/media' ]		
 		},
 	},
 
+	adminKeys: {
+		sourceAdmin: [ 
+			'e39a8be397992eb748be3975',
+		],
+		nodesAdmin: [
+			'e39a8be397992eb748be3975',
+		]
+	},
 
 	centerNode: {
 		port: 8080,

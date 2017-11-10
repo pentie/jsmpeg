@@ -15,9 +15,21 @@ module.exports = class WebCameraSource
 		}
 	}
 
-	start( url )
+	list() 
 	{
-		this.source = new JpegsFromWebCamera( url, this.feedProxy.bind(this) );
+		return {
+			name: this.sourceName,
+			active: this.active,
+			caption: this.config.caption,
+			src: this.config.src
+		};
+	}
+
+	start( cmdObj, callback )
+	{
+		let url = cmdObj.url;
+		this.source = new JpegsFromWebCamera( this.config, url, this.feedProxy.bind(this) );
+		this.source.start( callback );
 		this.active = true;
 	}
 
@@ -39,12 +51,7 @@ module.exports = class WebCameraSource
 	stop ()
 	{
 		this.active = false;
-		this.source.stop();
-	}
-
-	infos () 
-	{
-
+		this.source && this.source.stop();
 	}
 };
 
