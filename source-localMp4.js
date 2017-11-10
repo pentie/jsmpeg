@@ -66,11 +66,12 @@ module.exports = class LocalMp4Source
 
 		let mp4File = this.file2Play.shift();
 		do {
+			if (mp4File) break;
+
 			if (cmdObj.loop !== 'yes') {
 				this.stop();
 				return;
 			}
-			if (mp4File) break;
 
 			setImmediate( function(){
 				this.active && this.start( cmdObj );
