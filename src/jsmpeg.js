@@ -5,14 +5,15 @@ var JSMpeg =
 		videoMode : 'mpeg1',
 		mjpegTimeQueLength: 50,
 		mpeg1TimeQueLength: 50,
+		echoTimeQueLength: 50,
 		connectionId: 0
 	},
 
 	infos : {
 		mjpegTime : [],
 		mpeg1Time : [],
+		echoTime: [],
 		reports: null
-
 	},
 
 	switch_video_mode: function (mode) 
@@ -53,6 +54,7 @@ var JSMpeg =
 		config.connectionId = source.conn_id;
 		infos.mjpegTime.length = 0;
 		infos.mpeg1Time.length = 0;
+		infos.echoTime.length = 0;
 
 		source.send(JSON.stringify({
 			handler: config.videoMode,
@@ -97,7 +99,7 @@ var JSMpeg =
 		}
 
 		source.send(JSON.stringify(payload));
-		console.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
+		//console.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
 	},
 
 	on_mjpeg_rendered: function (source, renderTime) 

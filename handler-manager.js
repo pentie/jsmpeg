@@ -16,7 +16,19 @@ module.exports = class ManagerHandler
 		this.edgeNodes = [];
 	}
 
-	heartbeat () 
+	http( req, res )
+	{
+		if (req.url !== '/manager/echo') return;
+		let report = req.body;
+		if (!report) return;
+		if (!report.timestamp) return;
+		if (report.nodeId !== this.nodeId) return;
+
+		let clientEchoTime =  Date.now() - parseInt(report.timestamp);
+		res.json({ status: 'ok', clientEcho: clientEchoTime });
+	}
+
+	heartbeat() 
 	{
 		this.downstream( JSON.stringify({
 			cmd: 'report',

@@ -1,5 +1,7 @@
 
 const express = require('express');
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const http = require('http');
 const url = require('url');
 const WebSocket = require('ws');
@@ -20,6 +22,7 @@ module.exports = class WebSocketHub
 		this.handlerClass = new Array();
 		this.sources = new Array();
 		this.sourcerClass = new Array();
+		this.routeCmds = {};
 
 		this.env = new Map(); 
 		this.env.set('feed', this.feed.bind(this));
@@ -33,12 +36,26 @@ module.exports = class WebSocketHub
 		this.env.set('getNodeUrls', this.getLocalUrls.bind(this));
 	}
 
+	httpHandler( req, res, next)
+	{
+		let reqCmd = req.url.split('/',2).filter(e=>e.trim() != '');
+		if (reqCmd.length === 0) return next();
+
+		let respFunc = this.routeCmds[reqCmd[0]];
+		if (!respFunc) return next();
+
+		respFunc( req, res, next);
+	}
+
 	startServer(port)
 	{
 		let app = express();
 		app.use(express.static('public'));
+		app.use(cookieParser());
+		app.use(bodyParser.json());
+		app.use(this.httpHandler.bind(this));
 		app.use(function (req, res) {
-			res.send({ msg: "hello" });
+			res.json({ status: 'error', error: "handler not found" });
 		});
 
 		this.webServer = http.createServer(app);
@@ -117,14 +134,22 @@ module.exports = class WebSocketHub
 	loadSourcers ()
 	{
 		this.sourcerClass.forEach(function (Sourcer) {
-			this.sources.push(new Sourcer(this.env));
+			let source = new Sourcer(this.env);
+			this.sources.push(source);
+			if (typeof source.http === 'function') { 
+				this.routeCmds[source.sourceName] = source.http.bind(source);
+			}
 		}.bind(this));
 	}
 
 	loadHandlers ()
 	{
 		this.handlerClass.forEach(function (Handler) {
-			this.handlers.push(new Handler(this.env));
+			let handler = new Handler(this.env);
+			this.handlers.push(handler);
+			if (typeof handler.http === 'function') { 
+				this.routeCmds[handler.handlerName] = handler.http.bind(handler);
+			}
 		}.bind(this));
 	}
 
@@ -143,8 +168,9 @@ module.exports = class WebSocketHub
 	{
 		let results = {
 			nodeId: this.env.get('nodeId'),
+			timestamp: Date.now(),
 			config: this.config,
-			nodeUrls: this.getLocalUrls(this.port),
+			nodeUrls: this.getLocalUrls(this.config.port),
 			upstreamUrl: this.env.get('upstreamUrl'),
 			wsClientCount: this.socketServer.connectionCount
 		};

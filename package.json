@@ -8,9 +8,11 @@
   "license": "MIT",
   "dependencies": {
     "async": "^2.5.0",
+    "body-parser": "^1.18.2",
     "buffer-indexof-polyfill": "^1.0.1",
     "buffertools": "^2.1.6",
     "config": "^1.27.0",
+    "cookie-parser": "^1.4.3",
     "express": "^4.16.2",
     "file-on-write": "^1.1.1",
     "fluent-ffmpeg": "latest",
