@@ -12,6 +12,7 @@ module.exports = class Mpeg1VideoHandler
 		this.handlerName = 'mpeg1';
 		this.chunkHead = 0x47;	
 		this.eachClient = env.get('eachClient');
+		this.config = env.get('getConfig')();
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
 		this.chunker = new Mpeg1tsFromJpegs( null, this.downstream.bind(this), DEFAULT_QSCALE );

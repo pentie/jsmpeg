@@ -5,11 +5,14 @@ module.exports = class MJpegHandler
 	{
 		this.handlerName = 'mjpeg';
 		this.nodeId = env.get('nodeId');
+		this.config = env.get('getConfig')();
 		this.cache = env.get('newCache')();
 		this.eachClient = env.get('eachClient');
 		this.chunkHead = 0xFFD8;	
 		this.feed_list = new Array();
 		this.upstreamLastTime = Date.now();
+
+		this.interval = this.config.mjpegUpdateInterval? parseInt(this.config.mjpegUpdateInterval) : 100;
 	}
 
 	infos () 
@@ -42,7 +45,7 @@ module.exports = class MJpegHandler
 
 		setTimeout(function(){
 			this.onUpConnect(socket, 'interval');
-		}.bind(this), 100);
+		}.bind(this), this.interval);
 	}
 
 	feed (chunk) 

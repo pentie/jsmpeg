@@ -10,7 +10,7 @@ var WSSource = function(url, options) {
 
 	this.reconnectInterval = options.reconnectInterval !== undefined
 		? options.reconnectInterval
-		: 5;
+		: 5000;
 	this.shouldAttemptReconnect = !!this.reconnectInterval;
 
 	this.completed = false;
@@ -61,16 +61,24 @@ WSSource.prototype.onOpen = function() {
 	}
 };
 
+WSSource.prototype.getReconnectInterval = function() {
+	if (JSMpeg.config.reconnectInterval) {
+		return JSMpeg.config.reconnectInterval;
+	}
+	return this.reconnectInterval;
+};
+
 WSSource.prototype.onClose = function() {
 	if (this.shouldAttemptReconnect) {
+		clearTimeout(this.reconnectTimeoutId);
+
 		if (this.forceReconnect === true) {
 			this.start();	
 			this.forceReconnect = false;
 		} else {
-			clearTimeout(this.reconnectTimeoutId);
 			this.reconnectTimeoutId = setTimeout(function(){
 				this.start();	
-			}.bind(this), this.reconnectInterval*1000);
+			}.bind(this), this.getReconnectInterval());
 		}
 	}
 };
@@ -79,6 +87,41 @@ WSSource.prototype.onMessage = function(ev) {
 	if (this.destination) {
 		this.destination.write(ev.data);
 	}
+};
+
+WSSource.prototype.jsonPost = function( url, data, callback, timeout ) {
+	timeout = timeout? timeout : 5000;  
+
+	var xhr = new XMLHttpRequest();
+
+	xhr.onerror = function (e) {
+		callback('error');
+	};
+
+	xhr.onload = function() {
+		var res = null;
+		try {
+			res = JSON.parse( xhr.responseText );
+		} catch (e) {}
+
+		if (res === null) {
+			callback('formatError');
+		}
+
+		callback(null, res);
+	};
+
+	xhr.open('POST', url, true);
+	xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+	xhr.send(JSON.stringify(data));
+
+	setTimeout(function() {
+		if (xhr.readyState !== XMLHttpRequest.DONE) {
+			xhr.abort();
+			callback('timeout');
+		}
+	}, timeout);
+
 };
 
 return WSSource;

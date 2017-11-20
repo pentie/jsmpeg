@@ -5,6 +5,7 @@ module.exports = class ManagerHandler
 	{
 		this.handlerName = 'manager';
 		this.nodeId = env.get('nodeId');
+		this.config = env.get('getConfig')();
 		this.eachClient = env.get('eachClient');
 		this.chunkHead = 0x7b;	
 		this.upstreamSocket = null;
@@ -18,14 +19,7 @@ module.exports = class ManagerHandler
 
 	http( req, res )
 	{
-		if (req.url !== '/manager/echo') return;
-		let report = req.body;
-		if (!report) return;
-		if (!report.timestamp) return;
-		if (report.nodeId !== this.nodeId) return;
-
-		let clientEchoTime =  Date.now() - parseInt(report.timestamp);
-		res.json({ status: 'ok', clientEcho: clientEchoTime });
+		res.json(req.body);
 	}
 
 	heartbeat() 

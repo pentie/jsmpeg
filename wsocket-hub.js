@@ -24,9 +24,13 @@ module.exports = class WebSocketHub
 		this.sourcerClass = new Array();
 		this.routeCmds = {};
 
+		this.mjpegBoundary = 'MjpegBoundary';
+		this.mjpegAudience = new Array();
+
 		this.env = new Map(); 
 		this.env.set('feed', this.feed.bind(this));
 		this.env.set('configs', this.configs);
+		this.env.set('getConfig', this.getConfig.bind(this));
 		this.env.set('eachClient', this.eachClient.bind(this));
 		this.env.set('nodeId', this.getNodeId());
 		this.env.set('newCache', this.newCache.bind(this));
@@ -47,10 +51,35 @@ module.exports = class WebSocketHub
 		respFunc( req, res, next);
 	}
 
+	feedMjpegStream( jpeg ) 
+	{
+
+	}
+
+	mjpegStream( req, res )
+	{
+		let self = this;
+		res.writeHead(200, {
+			'Expires': 'Mon, 01 Jul 1980 00:00:00 GMT',
+			'Cache-Control': 'no-cache, no-store, must-revalidate',
+			'Pragma': 'no-cache',
+			'Content-Type': 'multipart/x-mixed-replace;boundary=' + self.mjpegBoundary
+		});
+
+		res.isNewAudience = true;
+		self.mjpegAudience.push(res);
+
+		res.socket.on('close', function () {
+			console.log('exiting client!');
+			self.mjpegAudience.splice(self.mjpegAudience.indexOf(res), 1);
+		});
+	}
+
 	startServer(port)
 	{
 		let app = express();
 		app.use(express.static('public'));
+		app.get(this.config.mjpegStreamPath, this.mjpegStream.bind(this));
 		app.use(cookieParser());
 		app.use(bodyParser.json());
 		app.use(this.httpHandler.bind(this));
@@ -241,11 +270,11 @@ module.exports = class WebSocketHub
 		return this.nodeId;
 	}
 
-	feed (chunk) 
+	feed( jpeg ) 
 	{
 		this.handlers.forEach(function(handler) {
 			if (typeof handler.feed === "function") { 
-				handler.feed(chunk);
+				handler.feed( jpeg );
 			}
 		});
 	}
@@ -295,6 +324,11 @@ module.exports = class WebSocketHub
 				client.send(chunk);
 			}
 		});
+	}
+
+	getConfig() 
+	{
+		return this.config;
 	}
 
 	run (index) 

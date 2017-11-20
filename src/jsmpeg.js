@@ -1,29 +1,73 @@
 var JSMpeg = 
 {
+	//======================================================//
+	// 	interface 
+	//======================================================//
+
 	config: {
+		echoResponseTimeout: 3000,
+		reconnectInterval: 3000,
 		mjpegFrameInterval: 1000,
-		videoMode : 'mpeg1',
 		mjpegTimeQueLength: 50,
 		mpeg1TimeQueLength: 50,
 		echoTimeQueLength: 50,
-		connectionId: 0
+		enableLog: true
 	},
 
 	infos : {
+		connectionId: 0,
+		videoMode : 'mpeg1',
 		mjpegTime : [],
 		mpeg1Time : [],
-		echoTime: [],
 		reports: null
 	},
 
-	switch_video_mode: function (mode) 
-	{
-		for (var index in window.video_objs) {
-			var source = window.video_objs[index].player.source; 
+	onHeartbeatReport: function( reports ) {this.log('heartbeat:', reports)},
+	onSourceConnected: function( source ) {this.log('connected:', source.conn_id)},
 
+	echo: function( callback, payload )
+	{
+		callback = callback? callback : function(res){
+			this.log('echo:', res);
+		}.bind(this);
+
+		var data = {
+			cmd: 'echo',
+			timestamp: Date.now(),
+			payload: payload? payload : {msg: 'no payload'}
+		};
+		this.getSources().forEach( function(source) {
+			source.jsonPost('/manager/echo', data, function(err, res){
+				if (err) {
+					callback(err);
+					return;
+				}
+				if (res.timestamp) {
+					var offset = Date.now() - parseInt(res.timestamp);
+					callback( null, offset );
+					return;
+				}
+				callback('unknowErr');
+			}, this.config.echoResponseTimeout);
+		}.bind(this));
+	},
+
+	forceReconnect: function () 
+	{
+		this.getSources().forEach( function(source) {
+			source.forceReconnect = true;
+			source.socket.close();
+		});
+	},
+
+	switchVideoMode: function (mode) 
+	{
+		mode = mode? mode: ((this.infos.videoMode==='mpeg1')? 'mjpeg' : 'mpeg1');
+
+		this.getSources().forEach( function(source) {
 			var req = {
 				handler: mode,
-				userId: JSMpeg.userid(),
+				userId: this.userid(),
 				cmd: 'active',
 				param: true
 			};
@@ -40,30 +84,49 @@ var JSMpeg =
 					source.send(JSON.stringify(req));
 					break;
 				default:
-					console.log('error mode: ', mode);
+					this.log('error mode: ', mode);
 			}
+
+			this.infos.videoMode = mode;
+		}.bind(this));
+	},
+
+	//======================================================//
+	// 	do not edit the code below
+	//======================================================//
+
+	log: function(title, msg)
+	{
+		this.config.enableLog && console.log(title, msg);
+	},
+
+	getSources: function () 
+	{
+		var sources = [];
+		for (var index in window.video_objs) {
+			sources.push( window.video_objs[index].player.source );
 		}
+		return sources;
 	},
 
 	on_source_opened: function (source) 
 	{
-		var config = JSMpeg.config;	
-		var infos = JSMpeg.infos;	
+		var config = this.config;	
+		var infos = this.infos;	
 
 		source.conn_id = Math.floor(Math.random() * 1000);
-		config.connectionId = source.conn_id;
+		infos.connectionId = source.conn_id;
 		infos.mjpegTime.length = 0;
 		infos.mpeg1Time.length = 0;
-		infos.echoTime.length = 0;
 
 		source.send(JSON.stringify({
-			handler: config.videoMode,
-			userId: JSMpeg.userid(),
+			handler: infos.videoMode,
+			userId: this.userid(),
 			cmd: 'active',
 			param: true
 		}));
 
-		console.log('source opened: ', source.conn_id);
+		this.onSourceConnected( source );
 	},
 
 	on_intra_rendered: function (y, cr, cb, source) 
@@ -86,38 +149,38 @@ var JSMpeg =
 		var payload = {
 			handler: 'mpeg1',
 			cmd: 'intra',
-			userId: JSMpeg.userid(),
+			userId: this.userid(),
 			intra_crc32 : crc32(cb),
 			intra_interval : interval_time,
 			close_when_delay : 0
 		};
 
-		var timeQue = JSMpeg.infos.mpeg1Time;
+		var timeQue = this.infos.mpeg1Time;
 		timeQue.unshift(interval_time);
-		if (timeQue.length > JSMpeg.config.mpeg1TimeQueLength) {
+		if (timeQue.length > this.config.mpeg1TimeQueLength) {
 			timeQue.pop();
 		}
 
 		source.send(JSON.stringify(payload));
-		//console.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
+		this.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
 	},
 
 	on_mjpeg_rendered: function (source, renderTime) 
 	{
-		if (JSMpeg.config.videoMode === 'mjpeg') {
+		if (this.infos.videoMode === 'mjpeg') {
 			setTimeout(function(){
 				source.send(JSON.stringify({
-					userId: JSMpeg.userid(),
+					userId: this.userid(),
 					handler: 'mjpeg',
 					cmd: 'interval',
 					renderTime: renderTime,
 				}));
-			}, JSMpeg.config.mjpegFrameInterval);
+			}.bind(this), this.config.mjpegFrameInterval);
 		}
 
-		var timeQue = JSMpeg.infos.mjpegTime;
+		var timeQue = this.infos.mjpegTime;
 		timeQue.unshift(renderTime);
-		if (timeQue.length > JSMpeg.config.mjpegTimeQueLength) {
+		if (timeQue.length > this.config.mjpegTimeQueLength) {
 			timeQue.pop();
 		}
 	},
