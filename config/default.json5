@@ -39,7 +39,7 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
-		mjpegStreamPath: '/seed.mjpeg',
+		mjpegStreamName: 'seed.mjpeg',
 	},
 
 	relaysNodes: [{
@@ -49,6 +49,7 @@
 		mjpegMaxUser: 200,
 		mjpegUpdateInterval: 100,
 		upstreamUrl: 'ws://localhost:8080',
+		mjpegStreamName: 'seed.mjpeg',
 	    },{
 		active: true,
 		port: 8082,
@@ -56,5 +57,14 @@
 		mjpegMaxUser: 200,
 		mjpegUpdateInterval: 100,
 		upstreamUrl: 'ws://localhost:8080',
+		mjpegStreamName: 'seed.mjpeg',
+	}],
+
+	playerNodes: [{
+		debug: true,
+		verbose: true,
+		type: 'mjpeg',
+		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
+		fbdev: '/dev/fb0'
 	}],
 }

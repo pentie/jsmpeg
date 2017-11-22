@@ -5,6 +5,7 @@ THIS_DIR=`dirname $(readlink -f $0)`
 main() 
 {
 	check_update
+	check_apt mplayer
 
 	if [ "$1" = "client" ]; then
 		build_mjpg_streamer
@@ -43,7 +44,6 @@ main()
 		exit 1
 	fi
 
-	node media-center.js $1
 }
 
 build_mjpg_streamer()

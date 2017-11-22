@@ -12,11 +12,15 @@ module.exports = class Mpeg1VideoHandler
 		this.handlerName = 'mpeg1';
 		this.chunkHead = 0x47;	
 		this.eachClient = env.get('eachClient');
+		this.isCenter = env.get('isCenter');
 		this.config = env.get('getConfig')();
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
-		this.chunker = new Mpeg1tsFromJpegs( null, this.downstream.bind(this), DEFAULT_QSCALE );
-		this.chunker.start();
+
+		if (this.isCenter) {
+			this.chunker = new Mpeg1tsFromJpegs( null, this.downstream.bind(this), DEFAULT_QSCALE );
+			this.chunker.start();
+		}
 	}
 
 	infos () 
