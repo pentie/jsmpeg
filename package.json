@@ -16,7 +16,6 @@
     "express": "^4.16.2",
     "file-on-write": "^1.1.1",
     "fluent-ffmpeg": "latest",
-    "framebuffer": "git+https://github.com/huangqiheng/node-framebuffer.git",
     "js-crc": "^0.2.0",
     "minimist": "^1.2.0",
     "mplayer": "^2.1.0",

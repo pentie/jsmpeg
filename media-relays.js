@@ -1,6 +1,6 @@
 
 const argv = require('minimist')(process.argv.slice(2));
-const WebSocketHub = require('./wsocket-hub.js'); 
+const WebSocketHub = require('./container-wsocket.js'); 
 
 if (argv.index === undefined) {
 	WebSocketHub.relaysSupervisor( require('config') );

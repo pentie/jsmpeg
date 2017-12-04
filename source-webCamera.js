@@ -1,5 +1,5 @@
 
-const {JpegsFromWebCamera} = require('./base.js');
+const {JpegsFromWebCamera} = require('./common-modules.js');
 
 module.exports = class WebCameraSource
 {

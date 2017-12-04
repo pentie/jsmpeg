@@ -1,5 +1,5 @@
 
-const {JpegsFromUsbCamera} = require('./base.js');
+const {JpegsFromUsbCamera} = require('./common-modules.js');
 
 module.exports = class UsbCameraSource
 {

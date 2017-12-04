@@ -1,5 +1,5 @@
 
-const {Mpeg1tsFromJpegs} = require('./base.js');
+const {Mpeg1tsFromJpegs} = require('./common-modules.js');
 
 const DEFAULT_QSCALE = 8;
 const MAX_EXPIRE_TIME = 3600;

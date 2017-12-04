@@ -61,10 +61,16 @@
 	}],
 
 	playerNodes: [{
-		debug: true,
-		verbose: true,
+		screen: '0',
 		type: 'mjpeg',
 		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
-		fbdev: '/dev/fb0'
+		debug: true,
+		verbose: true
+	}, {
+		screen: '1',
+		type: 'mjpeg',
+		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
+		debug: true,
+		verbose: true
 	}],
 }

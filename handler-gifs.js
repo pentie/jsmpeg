@@ -4,10 +4,20 @@ class GifsHandler
 	constructor(env) {
 		this.handlerName = 'gifs';
 		this.nodeId = env.get('nodeId');
+		this.isCenter = env.get('isCenter');
+		this.config = env.get('getConfig')();
 		this.eachClient = env.get('eachClient');
 		//this.chunkHead = 0xFFD8;	
 		this.feed_list = new Array();
 		this.upstreamLastTime = Date.now();
+	}
+
+	infos () 
+	{
+		return {
+			gifList: 'timeline.lst',
+			newGifs: []
+		};
 	}
 
 	onUpConnect (socket) 

@@ -1,7 +1,7 @@
 
 const resolve = require('path').resolve;
 const dir = require('node-dir');
-const {JpegsFromMp4File} = require('./base.js');
+const {JpegsFromMp4File} = require('./common-modules.js');
 
 module.exports = class LocalMp4Source
 {

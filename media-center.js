@@ -1,5 +1,5 @@
 
-const WebSocketHub = require('./wsocket-hub.js'); 
+const WebSocketHub = require('./container-wsocket.js'); 
 
 var wshub = new WebSocketHub( require('config') );
 wshub.addSourcer( require('./source-webCamera.js') );
