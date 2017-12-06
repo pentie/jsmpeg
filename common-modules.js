@@ -157,7 +157,7 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 		callback = callback || this.onFFmpegStart.bind(this);
 		this.command = ffmpeg()
 			.input(this.devPath)
-			.inputOptions( ['-f v4l2', '-input_format mjpeg'] )
+			.inputOptions( ['-f v4l2'] )
 			.output(this.output)
 			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
 			.videoFilters( this.config.filter )

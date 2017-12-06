@@ -63,8 +63,8 @@
 
 			$('#tabs').jqxTabs({ selectedItem: selected, width: '80%', position: 'top'});
 
-			$('#listboxUsbCamera').jqxListBox({width: 400, source: sources['usbCamera'].src, checkboxes: false, height: 150});
-			$('#listboxWebCamera').jqxListBox({width: 400, source: sources['webCamera'].src, checkboxes: false, height: 150});
+			$('#listboxUsbCamera').jqxListBox({width: 400, source: sources['usbCamera'].src, selectedIndex:0, checkboxes: false, height: 150});
+			$('#listboxWebCamera').jqxListBox({width: 400, source: sources['webCamera'].src, selectedIndex:0, checkboxes: false, height: 150});
 
 
 			var mp4Item = sources['localMp4'];

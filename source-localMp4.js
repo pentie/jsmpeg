@@ -24,6 +24,8 @@ module.exports = class LocalMp4Source
 				order: this.nowOrder,
 				loop: this.nowLoop
 			});
+		} else {
+			this.getNewPlaylist( [], this.nowOrder);
 		}
 	}
 
@@ -98,7 +100,7 @@ module.exports = class LocalMp4Source
 				}
 			}
 			this.reOrderArray( newList, order );
-			callback( newList );
+			callback && callback( newList );
 		}.bind(this));
 	}
 

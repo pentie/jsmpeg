@@ -1,6 +1,7 @@
 {
 	source: {
 		usbCamera: {
+			autoStart: true, // only one item should be set to true
 			caption: 'Local usb camera',
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
@@ -15,7 +16,6 @@
 		},
 
 		localMp4: {
-			autoStart: true, // only one item should be set to true
 			caption: 'Local mp4 playlist',
 			filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
@@ -61,12 +61,14 @@
 	}],
 
 	playerNodes: [{
+		active: true,
 		screen: '0',
 		type: 'mjpeg',
 		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
 		debug: true,
 		verbose: true
 	}, {
+		active: false,
 		screen: '1',
 		type: 'mjpeg',
 		url: 'http://localhost:8080/mjpeg/seed.mjpeg',

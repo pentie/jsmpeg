@@ -18,7 +18,7 @@
     "fluent-ffmpeg": "latest",
     "js-crc": "^0.2.0",
     "minimist": "^1.2.0",
-    "mplayer": "^2.1.0",
+    "mplayer": "huangqiheng/mplayer",
     "node-cache": "^4.1.1",
     "node-dir": "^0.1.17",
     "node-machine-id": "^1.1.9",
@@ -26,6 +26,7 @@
     "redis": "^2.8.0",
     "safe-buffer": "latest",
     "ultron": "latest",
+    "wait-for-port": "git+https://github.com/Chris927/wait-for-host.git",
     "winston": "^2.4.0",
     "ws": "latest"
   }
