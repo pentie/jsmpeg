@@ -63,6 +63,15 @@
 	playerNodes: [{
 		active: true,
 		screen: '0',
+		vo: 'vdpau',
+		type: 'v4l2',
+		dev: '/dev/video0',
+		debug: true,
+		verbose: true
+	}, {
+		active: false,
+		screen: '0',
+		vo: 'vdpau',
 		type: 'mjpeg',
 		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
 		debug: true,
@@ -70,6 +79,7 @@
 	}, {
 		active: false,
 		screen: '1',
+		vo: 'vdpau',
 		type: 'mjpeg',
 		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
 		debug: true,

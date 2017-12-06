@@ -5,7 +5,7 @@ THIS_DIR=`dirname $(readlink -f $0)`
 main() 
 {
 	check_update
-	check_apt mplayer
+	check_apt mplayer ffmpeg
 
 	if [ "$1" = "client" ]; then
 		build_mjpg_streamer
@@ -31,6 +31,11 @@ main()
 		check_apt nodejs
 	fi
 
+	if ! cmd_exists /usr/bin/npm; then
+		log "installing npm"
+		check_apt npm
+	fi
+
 	if ! cmd_exists /usr/bin/uglifyjs; then
 		npm install uglify-js -g
 	fi
@@ -38,12 +43,6 @@ main()
 	cd $THIS_DIR
 
 	npm install
-
-	if ! cmd_exists ffmpeg; then 
-		echo "you must manual install ffmpeg, don't forget gpu support"
-		exit 1
-	fi
-
 }
 
 build_mjpg_streamer()

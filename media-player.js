@@ -10,18 +10,39 @@ configs.forEach( function( config ) {
 		return;
 	}
 
-	let cmdlineArgs = [
-		'-vo x11 -screen '+ config.screen,
-		'-fs -zoom',
-		'-nocache',
-		'-demuxer lavf'
-	].join(' ');
+	let cmdlineArgs;
+	let openTarget;
+
+	switch (config.type) {
+		case 'mjpeg':
+			cmdlineArgs = [
+				'-vo ' + config.vo,
+				'-screen '+ config.screen,
+				'-fs -zoom',
+				'-nocache',
+				'-demuxer lavf'
+			].join(' ');
+			openTarget = config.url;
+			break;
+		case 'v4l2':
+			cmdlineArgs = [
+				'-tv driver=v4l2:device=' + config.dev,
+				'-vo ' + config.vo,
+				'-screen '+ config.screen,
+				'-fs -zoom',
+				'-nocache'
+			].join(' ');
+			openTarget = 'tv://';
+			break;
+		default:
+			return;
+	}
 
 	let options = { 
 		debug: config.debug, 
 		verbose: config.verbose, 
 		args: cmdlineArgs,
-		oriTaskUrl: config.url
+		openTarget: openTarget
 	};
 
 	taskQueue.push(options);
@@ -44,7 +65,7 @@ function cleanJobs()
 		let player = new MPlayer(options);
 		player.oriTask = options;
 
-		player.openFile( options.oriTaskUrl );
+		player.openFile( options.openTarget );
 		player.play();
 
 		player.timePass = 0;
