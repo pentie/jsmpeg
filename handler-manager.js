@@ -19,6 +19,7 @@ module.exports = class ManagerHandler
 
 	http( req, res )
 	{
+		res.header('Access-Control-Allow-Origin', '*');
 		res.json(req.body);
 	}
 

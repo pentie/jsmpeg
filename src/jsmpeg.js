@@ -37,7 +37,9 @@ var JSMpeg =
 			payload: payload? payload : {msg: 'no payload'}
 		};
 		this.getSources().forEach( function(source) {
-			source.jsonPost('/manager/echo', data, function(err, res){
+			var sourcehost = new URL(source.url);
+			sourcehost.protocol = 'http';
+			source.jsonPost(sourcehost.href+'manager/echo', data, function(err, res){
 				if (err) {
 					callback(err);
 					return;
