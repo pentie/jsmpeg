@@ -19,6 +19,8 @@ module.exports = class ManagerHandler
 
 	http( req, res )
 	{
+		res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+		res.header('Access-Control-Allow-Headers', 'Content-Type');
 		res.header('Access-Control-Allow-Origin', '*');
 		res.json(req.body);
 	}
