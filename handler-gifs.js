@@ -20,7 +20,7 @@ class GifsHandler
 		};
 	}
 
-	onUpConnect (socket) 
+	onUpConnect (socket, config) 
 	{
 		let nowTime = Date.now();
 
@@ -35,7 +35,8 @@ class GifsHandler
 		this.upstreamLastTime = nowTime;
 	}
 
-	onUpResponse (chunk, socket) {
+	onUpResponse (chunk, socket, config) 
+	{
 		this.downstream(chunk);
 	}
 

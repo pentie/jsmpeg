@@ -38,7 +38,7 @@ module.exports = class Mpeg1VideoHandler
 		};
 	}
 
-	onUpConnect (socket) 
+	onUpConnect (socket, config) 
 	{
 		socket.send(JSON.stringify({
 			userId: this.nodeId,
@@ -48,7 +48,7 @@ module.exports = class Mpeg1VideoHandler
 		}));
 	}
 
-	onUpResponse (chunk, socket) 
+	onUpResponse (chunk, socket, config) 
 	{
 		this.downstream(chunk);
 	}

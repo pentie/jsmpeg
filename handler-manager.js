@@ -7,6 +7,8 @@ module.exports = class ManagerHandler
 		this.nodeId = env.get('nodeId');
 		this.config = env.get('getConfig')();
 		this.eachClient = env.get('eachClient');
+		this.defaultUpstream = env.get('defaultUpstream');
+		this.switchUpstream= env.get('switchUpstream');
 		this.chunkHead = 0x7b;	
 		this.upstreamSocket = null;
 		this.isCenter = env.get('isCenter');
@@ -49,7 +51,7 @@ module.exports = class ManagerHandler
 		};
 	}
 
-	onUpConnect (socket) 
+	onUpConnect (socket, config) 
 	{
 		this.upstreamSocket = socket;
 
@@ -61,7 +63,7 @@ module.exports = class ManagerHandler
 		}));
 	}
 
-	onUpResponseTrans(res, socket) 
+	onUpResponseTrans(res, socket, config) 
 	{
 		switch (res.cmd) {
 			case 'getNodeId':
@@ -90,7 +92,7 @@ module.exports = class ManagerHandler
 		return res;
 	}
 
-	onUpResponse (chunk, socket) 
+	onUpResponse (chunk, socket, config) 
 	{
 		let res = null;
 		try {
@@ -101,7 +103,7 @@ module.exports = class ManagerHandler
 			return;
 		}
 
-		let newRes = this.onUpResponseTrans(res, socket);
+		let newRes = this.onUpResponseTrans(res, socket, config);
 		if (newRes === null) {
 			return;
 		}
@@ -114,6 +116,11 @@ module.exports = class ManagerHandler
 		this.eachClient(function each(client) {
 			client.send(chunk);
 		});
+	}
+
+	onDownConnect( socket )
+	{
+		this.switchUpstream( socket );
 	}
 
 	onDownRequest (socket, req) 
@@ -139,6 +146,30 @@ module.exports = class ManagerHandler
 		}
 
 		switch (req.cmd) {
+			case 'switchUpUpstream':
+
+				break;
+			case 'switchUpstream':
+				this.switchUpstream( socket, req.name );
+				socket.send(JSON.stringify({
+					status: 'ok',
+					cmd: req.cmd, 
+					nodeId: this.nodeId
+				}));
+				break;
+
+			case 'defaultUpstream':
+				if (!this.accessValid(req)) {
+					break;
+				}
+				this.defaultUpstream( req.name );
+				socket.send(JSON.stringify({
+					status: 'ok',
+					cmd: req.cmd, 
+					nodeId: this.nodeId
+				}));
+				break;
+
 			case 'getNodeId':
 				let res = {
 					status: 'ok',

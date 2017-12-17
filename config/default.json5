@@ -1,7 +1,6 @@
 {
 	source: {
 		usbCamera: {
-			autoStart: true, // only one item should be set to true
 			caption: 'Local usb camera',
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
@@ -34,30 +33,57 @@
 		]
 	},
 
-	centerNode: {
+	centerNodes: [{
+		active: true,
 		port: 8080,
+		defaultSource: 'localMp4',
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
-	},
+	    },{
+		active: true,
+		port: 8081,
+		defaultSource: 'localMp4',
+		mpeg1MaxUser: 20,
+		mjpegMaxUser: 200,
+		heartBeatInterval: 1000,
+		mjpegStreamName: 'seed.mjpeg',
+	}],
 
 	relaysNodes: [{
 		active: true,
-		port: 8081,
+		port: 8090,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		mjpegUpdateInterval: 100,
-		upstreamUrl: 'ws://localhost:8080',
 		mjpegStreamName: 'seed.mjpeg',
+		upstreams :[{
+			name: 'streamOne',
+			caption: 'The sample stream A',
+			url: 'ws://localhost:8080',
+		},{
+			name: 'streamTwo',
+			caption: 'The sample stream B',
+			url: 'ws://localhost:8081',
+		}],
 	    },{
-		active: true,
-		port: 8082,
+		active: false,
+		port: 8091,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		mjpegUpdateInterval: 100,
-		upstreamUrl: 'ws://localhost:8080',
 		mjpegStreamName: 'seed.mjpeg',
+		upstreams :[{
+			default: true,
+			name: 'streamOne',
+			caption: 'The sample stream A',
+			url: 'ws://localhost:8080',
+		},{
+			name: 'streamTwo',
+			caption: 'The sample stream B',
+			url: 'ws://localhost:8081',
+		}],
 	}],
 
 	playerNodes: [{

@@ -15,13 +15,14 @@ const UPSTREAM_RECONNECT_INTERVAL = 300;
 
 module.exports = class WebSocketHub 
 {
-	constructor(configs) 
+	constructor( configs ) 
 	{
 		this.configs = configs;
 		this.handlers = new Array();
 		this.handlerClass = new Array();
 		this.sources = new Array();
 		this.sourcerClass = new Array();
+		this.upstreams = new Array();
 		this.routeCmds = {};
 
 		this.env = new Map(); 
@@ -35,6 +36,8 @@ module.exports = class WebSocketHub
 		this.env.set('sourcerInfos', this.sourcerInfos.bind(this));
 		this.env.set('activeSource', this.activeSource.bind(this));
 		this.env.set('getNodeUrls', this.getLocalUrls.bind(this));
+		this.env.set('defaultUpstream', this.defaultUpstream.bind(this));
+		this.env.set('switchUpstream', this.switchUpstream.bind(this));
 	}
 
 	httpHandler( req, res, next)
@@ -101,6 +104,41 @@ module.exports = class WebSocketHub
 		}.bind(this));
 
 		this.env.set('server', this.socketServer);
+	}
+
+	static getFirstActive( configs ) 
+	{
+		let firstActiveIndex = null;
+		let activeCount = 0;
+		for (var index in configs) {
+			let config = configs[index];
+			if (config.active !== true) {
+				continue;
+			}
+			if ( firstActiveIndex === null ) {
+				firstActiveIndex = index;
+			}
+			activeCount++;
+		}
+
+		return [ firstActiveIndex, activeCount ];
+	}
+
+	static centerSupervisor( allConfigs ) 
+	{
+		let configs = allConfigs.get('centerNodes');
+
+		for (var index in configs) {
+			let config = configs[index];
+			if (config.active !== true) {
+				continue;
+			}
+			let subCenter = fork(process.argv[1], ['--index', index], {silent: true});
+			subCenter.index = index;
+			subCenter.stdout.on('data', function(data) {
+				console.log('stdout('+subCenter.index+'): ', data.toString().trim());
+			});
+		}
 	}
 
 	static relaysSupervisor (allConfigs) 
@@ -173,7 +211,7 @@ module.exports = class WebSocketHub
 			timestamp: Date.now(),
 			config: this.config,
 			nodeUrls: this.getLocalUrls(this.config.port),
-			upstreamUrl: this.env.get('upstreamUrl'),
+			upstreams : this.env.get('upstreams'),
 			wsClientCount: this.socketServer.connectionCount
 		};
 
@@ -304,62 +342,144 @@ module.exports = class WebSocketHub
 		return this.config;
 	}
 
-	run (index) 
+	runCenter (index) 
 	{
-		if (index === undefined) {
-			this.config = this.configs.get('centerNode');
-			this.env.set('isCenter', true);
+		this.config = this.configs.get('centerNodes')[parseInt(index)];
+		this.env.set('isCenter', true);
 
-			this.startServer(this.config.port);
-			this.loadHandlers();
-			this.loadSourcers();
+		let soureName = this.config.defaultSource;
+		this.configs.source[soureName].autoStart = true;
+
+		this.startServer(this.config.port);
+		this.loadHandlers();
+		this.loadSourcers();
+	}
+
+	runRelays (index) 
+	{
+		this.config = this.configs.get('relaysNodes')[parseInt(index)];
+		this.env.set('isCenter', false);
+		this.env.set('upstreams', this.config.upstreams);
+
+		this.startServer(this.config.port);
+		this.loadHandlers();
+
+		this.runUpstreams(this.config.upstreams);
+	}
+
+	switchUpstream( socket, name ) 
+	{
+		if ( name === undefined ) {
+			let nameToSet = this.defaultUpstream();
 		} else {
-			this.config = this.configs.get('relaysNodes')[parseInt(index)];
-			this.env.set('isCenter', false);
-			this.env.set('upstreamUrl', this.config.upstreamUrl);
+			let found = false;
+			this.config.upstreams.some( function( item ){
+				if( item.name === name ) {
+					found = true;
+					return true;
+				}
+				return false;
+			});
 
-			this.startServer(this.config.port);
-			this.loadHandlers();
+			if( found ) {
+				nameToSet = name;
+			} else {
+				nameToSet = this.defaultUpstream();
+			}
+		}
+		socket.upstreamName = nameToSet;
+	}
 
-			this.upstream(this.config.upstreamUrl);
+	defaultUpstream( name )
+	{
+		if ( name === undefined ) {
+			let resName = null;
+			this.upstreams.some( function( upClient ) {
+				if (upClient.config.default) {
+					resName = upClient.config.name;
+					return true;
+				}
+				return false;
+			});
+
+			if (resName === null) {
+				this.config.upstreams.some( function( item ){
+					if (item.default) {
+						resName = item.name;
+						return true;
+					}
+					return false;
+				});
+			}
+
+			return resName;
+		} else {
+			let oriDefault = null;
+			let done = false;
+
+			this.upstreams.forEach( function( upClient ) {
+				if( upClient.config.default ) {
+					if (oriDefault === null) {
+						oriDefault = upClient;
+					}
+				}
+				if( upClient.config.name === name ) {
+					upClient.config.default = true;
+					done = true;
+				} else {
+					upClient.config.default = false;
+				}
+			});
+
+			if( !done ) {
+				if( oriDefault ){
+					oriDefault.config.default = true;
+				}
+			}
 		}
 	}
 
-	upstream (url, interval = UPSTREAM_RECONNECT_INTERVAL) 
+	runUpstreams( configs, interval = UPSTREAM_RECONNECT_INTERVAL ) 
 	{
-		let handlers = this.handlers;
-		this.wsClient(url, interval, function recv(data){
-			var client = this;
+		configs.forEach( function( config ) {
+			let handlers = this.handlers;
+			let upstreamClient = this.wsClient( config.url, interval, function( data ){
+				var client = this;
 
-			if (data === null) {
-				handlers.forEach(function(handler) {
-					if (typeof handler.onUpConnect === "function") { 
-						handler.onUpConnect(client.socket);
-					}
-				});
-				return;
-			}
-
-			var signs = [];
-			if (typeof data === 'string') {
-				signs.push(data.charCodeAt(0));
-			} else {
-
-				var dataView = new DataView(data);
-				signs.push(dataView.getUint8(0));
-				signs.push(dataView.getUint16(0));
-			}
-
-			handlers.forEach(function(handler) {
-				if (typeof handler.onUpResponse !== "function") { 
+				if (data === null) {
+					handlers.forEach(function(handler) {
+						if (typeof handler.onUpConnect === "function") { 
+							handler.onUpConnect(client.socket, config);
+						}
+					});
 					return;
 				}
 
-				if (signs.includes(handler.chunkHead)) {
-					handler.onUpResponse (data, client.socket);
+				var signs = [];
+				if (typeof data === 'string') {
+					signs.push(data.charCodeAt(0));
+				} else {
+
+					var dataView = new DataView(data);
+					signs.push(dataView.getUint8(0));
+					signs.push(dataView.getUint16(0));
 				}
-			}, this);
-		});
+
+				// fixme
+				handlers.forEach(function(handler) {
+					if (typeof handler.onUpResponse !== "function") { 
+						return;
+					}
+
+					if (signs.includes(handler.chunkHead)) {
+						handler.onUpResponse (data, client.socket, config);
+					}
+				});
+			});
+
+			upstreamClient.config = config;
+			this.upstreams.push( upstreamClient );
+		}.bind(this));
 	}
 
 	wsClient(url, interval, recv) 

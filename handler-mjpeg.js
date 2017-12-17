@@ -74,7 +74,12 @@ module.exports = class MJpegHandler
 		};
 	}
 
-	onUpConnect (socket, cmd = 'active') 
+	onUpConnect (socket, config) 
+	{
+		this.requestNextJpeg( socket, 'active');
+	}
+
+	requestNextJpeg ( socket, cmd ) 
 	{
 		let nowTime = Date.now();
 
@@ -89,12 +94,12 @@ module.exports = class MJpegHandler
 		this.upstreamLastTime = nowTime;
 	}
 
-	onUpResponse( chunk, socket ) 
+	onUpResponse (chunk, socket, config) 
 	{
 		this.downstream( chunk );
 
 		setTimeout(function(){
-			this.onUpConnect(socket, 'interval');
+			this.requestNextJpeg( socket, 'interval');
 		}.bind(this), this.interval);
 	}
 
@@ -116,10 +121,6 @@ module.exports = class MJpegHandler
 		}, this.feed_list);
 
 		this.feed_list.length = 0;
-	}
-
-	onDownConnect (socket) 
-	{
 	}
 
 	onDownRequest (socket, req) 
