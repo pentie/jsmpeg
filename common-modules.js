@@ -56,7 +56,7 @@ class ChunksFromFFmpegBase
 	}
 
 	onFFmpegStart( cmdline ) {
-		console.log( this.constructor.name, cmdline);
+		//console.log( this.constructor.name, cmdline);
 	}
 
 	onFFmepgEnd () {

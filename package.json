@@ -26,6 +26,7 @@
     "redis": "^2.8.0",
     "safe-buffer": "latest",
     "ultron": "latest",
+    "uuid": "^3.1.0",
     "wait-for-port": "git+https://github.com/Chris927/wait-for-host.git",
     "winston": "^2.4.0",
     "ws": "latest"

@@ -11,6 +11,7 @@ var JSMpeg =
 		mjpegTimeQueLength: 50,
 		mpeg1TimeQueLength: 50,
 		echoTimeQueLength: 50,
+		defaultSourceIndex: 0,
 		enableLog: true
 	},
 
@@ -19,11 +20,12 @@ var JSMpeg =
 		videoMode : 'mpeg1',
 		mjpegTime : [],
 		mpeg1Time : [],
+		upstreams : null,
 		reports: null
 	},
 
-	onHeartbeatReport: function( reports ) {this.log('heartbeat:', reports)},
-	onSourceConnected: function( source ) {this.log('connected:', source.conn_id)},
+	onSourceConnected: function( source ) {this.log('connected:', source.conn_id);},
+	onHeartbeatReport: function( reports ) {this.log('heartbeat:', reports);},
 
 	echo: function( callback, payload )
 	{
@@ -52,6 +54,78 @@ var JSMpeg =
 				callback('unknowErr');
 			}, this.config.echoResponseTimeout);
 		}.bind(this));
+	},
+
+	switchUpstream: function( name, sourceIndex )
+	{
+		if (!this.infos.upstreams) {
+			this.log('has no upstreams');
+			return;
+		}
+
+		if ( name === undefined ) {
+			var activeIndex = -1;
+			var newName = null;
+			for ( var index in this.infos.upstreams ) {
+				var upstream = this.infos.upstreams[ index ]; 
+				if ( upstream.active ) {
+					activeIndex = index;
+				} else {
+					if (activeIndex >= 0) {
+						newName || (newName = upstream.name);
+					}
+				}
+			}
+
+			if ( name ) {
+				this.log('the input upstream name is invalid');
+			}
+
+			if ( newName ) {
+				name = newName;
+			} else {
+				name = this.infos.upstreams[0].name;
+			}
+		}
+
+		var nameValid = false;
+
+		for ( var index in this.infos.upstreams ) {
+			var upstream = this.infos.upstreams[ index ]; 
+
+			if ( upstream.name != name ) {
+				continue;
+			}
+
+			if ( upstream.active ) {
+				this.log('no need to change upstream');
+				return;
+			}
+
+			nameValid = true;
+		}
+
+		var source = this.getSource( sourceIndex );
+
+		if ( !source ) {
+			this.log( 'no source found');
+		}
+
+		var req = {
+			handler: 'manager',
+			userId: this.userid(),
+			cmd: 'active',
+			param: true
+		};
+
+		source.send(JSON.stringify({
+			handler: 'manager',
+			userId: this.userid(),
+			cmd: 'switchUpstream',
+			name: name
+		}));
+
+		return name;
 	},
 
 	forceReconnect: function () 
@@ -100,6 +174,23 @@ var JSMpeg =
 	log: function(title, msg)
 	{
 		this.config.enableLog && console.log(title, msg);
+	},
+
+	getSource: function( index )
+	{
+		var sources = this.getSources();
+		if (sources.length === 0) {
+			return null; 
+		}
+
+		if ( index === undefined ) {
+			index = this.config.defaultSourceIndex;
+		}
+
+		index = Math.min( index, sources.length -1 );
+		index = Math.max( index, 0 );
+
+		return sources[ index ];
 	},
 
 	getSources: function () 
@@ -164,7 +255,7 @@ var JSMpeg =
 		}
 
 		source.send(JSON.stringify(payload));
-		this.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
+		//this.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
 	},
 
 	on_mjpeg_rendered: function (source, renderTime) 

@@ -6,6 +6,7 @@ const http = require('http');
 const url = require('url');
 const WebSocket = require('ws');
 const machineIdSync = require('node-machine-id').machineIdSync;
+const uuidv1 = require('uuid/v1');
 const crypto = require('crypto');
 const NodeCache = require('node-cache');
 const os = require('os');
@@ -22,7 +23,7 @@ module.exports = class WebSocketHub
 		this.handlerClass = new Array();
 		this.sources = new Array();
 		this.sourcerClass = new Array();
-		this.upstreams = new Array();
+		this.upstreamClients = {};
 		this.routeCmds = {};
 
 		this.env = new Map(); 
@@ -30,6 +31,8 @@ module.exports = class WebSocketHub
 		this.env.set('configs', this.configs);
 		this.env.set('getConfig', this.getConfig.bind(this));
 		this.env.set('eachClient', this.eachClient.bind(this));
+		this.env.set('findClient', this.findClient.bind(this));
+		this.env.set('broadcast', this.broadcast.bind(this));
 		this.env.set('nodeId', this.getNodeId());
 		this.env.set('newCache', this.newCache.bind(this));
 		this.env.set('handlerInfos', this.handlerInfos.bind(this));
@@ -91,12 +94,15 @@ module.exports = class WebSocketHub
 				console.log('image feed err: '+err);	
 			});
 
+			this.switchUpstream( socket );
+
 			this.handlers.forEach(function(handler) {
 				if (typeof handler.onDownConnect === "function") { 
-					handler.onDownConnect(socket);
+					handler.onDownConnect( socket );
 				}
 			});
 
+			socket.uuid = uuidv1();
 		}).bind(this));
 
 		this.webServer.listen(port, function listening() {
@@ -317,24 +323,46 @@ module.exports = class WebSocketHub
 		this.handlerClass.push(Handler);
 	}
 
-	eachClient (callback, whiteList) 
+	findClient (callback, whiteList) 
 	{
-		let enum_list = whiteList? whiteList : this.socketServer.clients;
+		let checkList = whiteList? whiteList : this.socketServer.clients;
 
-		enum_list.forEach(function each(client) {
+		let resClient = null;
+		for (var i=0; i < checkList.length; i++) {
+			let client = checkList[i]; 
 			if (client.readyState === WebSocket.OPEN) {
-				callback(client);
+				if (callback( client )) { 
+					resClient = client;
+					break;
+				}
 			}
-		});
+		}
+		return resClient;
 	}
 
-	broadcast (chunk) 
+	eachClient (callback, whiteList) 
 	{
-		this.socketServer.clients.forEach(function each(client) {
-			if (client.readyState === WebSocket.OPEN) {
-				client.send(chunk);
+		if (whiteList) {
+			for (var i=0; i < whiteList.length; i++) {
+				let client = whiteList[i]; 
+				if (client.readyState === WebSocket.OPEN) {
+					callback(client);
+				}
 			}
-		});
+		} else {
+			this.socketServer.clients.forEach( function(client) {
+				if (client.readyState === WebSocket.OPEN) {
+					callback(client);
+				}
+			});
+		}
+	}
+
+	broadcast( chunk, whiteList ) 
+	{
+		this.eachClient(function(client){
+			client.send(chunk);
+		}, whiteList);
 	}
 
 	getConfig() 
@@ -344,8 +372,9 @@ module.exports = class WebSocketHub
 
 	runCenter (index) 
 	{
+		this.isCenter = true;
 		this.config = this.configs.get('centerNodes')[parseInt(index)];
-		this.env.set('isCenter', true);
+		this.env.set('isCenter', this.isCenter);
 
 		let soureName = this.config.defaultSource;
 		this.configs.source[soureName].autoStart = true;
@@ -357,8 +386,9 @@ module.exports = class WebSocketHub
 
 	runRelays (index) 
 	{
+		this.isCenter = false;
 		this.config = this.configs.get('relaysNodes')[parseInt(index)];
-		this.env.set('isCenter', false);
+		this.env.set('isCenter', this.isCenter);
 		this.env.set('upstreams', this.config.upstreams);
 
 		this.startServer(this.config.port);
@@ -369,67 +399,88 @@ module.exports = class WebSocketHub
 
 	switchUpstream( socket, name ) 
 	{
-		if ( name === undefined ) {
-			let nameToSet = this.defaultUpstream();
-		} else {
-			let found = false;
-			this.config.upstreams.some( function( item ){
-				if( item.name === name ) {
-					found = true;
-					return true;
-				}
-				return false;
-			});
+		if (this.isCenter) {
+			return null; 
+		}
 
-			if( found ) {
-				nameToSet = name;
-			} else {
-				nameToSet = this.defaultUpstream();
+		if ( name === undefined ) {
+			name = this.defaultUpstream();
+		}
+
+		if( socket.upstreamName === name ) {
+			return;
+		}
+
+		if ( !this.upstreamClients.hasOwnProperty( name )) {
+			return;
+		}
+
+		if ( this.upstreamClients.hasOwnProperty( socket.upstreamName )) {
+			let oldDownClients = this.upstreamClients[socket.upstreamName].downClients;
+			let indexExists = oldDownClients.indexOf( socket );
+			if ( indexExists >= 0 ) {
+				oldDownClients.splice( indexExists, 1 );
 			}
 		}
-		socket.upstreamName = nameToSet;
+
+		let targetClients = this.upstreamClients[name].downClients;
+		targetClients.push( socket );
+
+		socket.upstreamName = name;
 	}
 
 	defaultUpstream( name )
 	{
-		if ( name === undefined ) {
-			let resName = null;
-			this.upstreams.some( function( upClient ) {
-				if (upClient.config.default) {
-					resName = upClient.config.name;
-					return true;
+		if (this.isCenter) {
+			return null; 
+		}
+
+		if ( name === undefined ) 
+		{
+			let theFirst = null;
+
+			for (var upName in this.upstreamClients) {
+				if (theFirst === null) {
+					theFirst = upName;
 				}
-				return false;
-			});
+				let config = this.upstreamClients[upName].config;
+				if (config.default) {
+					return uName;
+				}
+			};
 
-			if (resName === null) {
-				this.config.upstreams.some( function( item ){
-					if (item.default) {
-						resName = item.name;
-						return true;
-					}
-					return false;
-				});
-			}
+			for (var index in this.config.upstreams) {
+				let config = this.config.upstreams[index];
+				if (theFirst === null) {
+					theFirst = config.name;
+				}
+				if (config.default) {
+					return config.name;
+				}
+			};
 
-			return resName;
+			return theFirst;
+
 		} else {
 			let oriDefault = null;
 			let done = false;
 
-			this.upstreams.forEach( function( upClient ) {
+			for (var upName in this.upstreamClients) {
+				let upClient = this.upstreamClients[upName]; 
+
 				if( upClient.config.default ) {
 					if (oriDefault === null) {
 						oriDefault = upClient;
 					}
 				}
+
 				if( upClient.config.name === name ) {
 					upClient.config.default = true;
 					done = true;
 				} else {
 					upClient.config.default = false;
 				}
-			});
+			};
 
 			if( !done ) {
 				if( oriDefault ){
@@ -447,11 +498,12 @@ module.exports = class WebSocketHub
 				var client = this;
 
 				if (data === null) {
-					handlers.forEach(function(handler) {
+					for (var i=0; i < handlers.length; i++) {
+						let handler = handlers[i];
 						if (typeof handler.onUpConnect === "function") { 
-							handler.onUpConnect(client.socket, config);
+							handler.onUpConnect( client );
 						}
-					});
+					};
 					return;
 				}
 
@@ -465,20 +517,25 @@ module.exports = class WebSocketHub
 					signs.push(dataView.getUint16(0));
 				}
 
-				// fixme
-				handlers.forEach(function(handler) {
+				for (var i=0; i < handlers.length; i++) {
+					let handler = handlers[i];
+
 					if (typeof handler.onUpResponse !== "function") { 
-						return;
+						continue;
 					}
 
-					if (signs.includes(handler.chunkHead)) {
-						handler.onUpResponse (data, client.socket, config);
+					if ( !signs.includes( handler.chunkHead )) {
+						continue;
 					}
-				});
+
+					handler.onUpResponse( data, client );
+				};
 			});
 
 			upstreamClient.config = config;
-			this.upstreams.push( upstreamClient );
+			upstreamClient.downClients = new Array();
+
+			this.upstreamClients[ config.name ] =  upstreamClient;
 		}.bind(this));
 	}
 

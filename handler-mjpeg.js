@@ -18,8 +18,6 @@ module.exports = class MJpegHandler
 		this.mjpegAudience = new Array();
 
 		this.interval = this.config.mjpegUpdateInterval? parseInt(this.config.mjpegUpdateInterval) : 100;
-
-
 	}
 
 	http( req, res )
@@ -74,16 +72,16 @@ module.exports = class MJpegHandler
 		};
 	}
 
-	onUpConnect (socket, config) 
+	onUpConnect( client ) 
 	{
-		this.requestNextJpeg( socket, 'active');
+		this.requestNextJpeg( client, 'active');
 	}
 
-	requestNextJpeg ( socket, cmd ) 
+	requestNextJpeg ( client, cmd ) 
 	{
 		let nowTime = Date.now();
 
-		socket.send(JSON.stringify({
+		client.socket.send(JSON.stringify({
 			userId: this.nodeId,
 			handler: this.handlerName,
 			cmd: cmd,
@@ -94,12 +92,12 @@ module.exports = class MJpegHandler
 		this.upstreamLastTime = nowTime;
 	}
 
-	onUpResponse (chunk, socket, config) 
+	onUpResponse( chunk, client ) 
 	{
-		this.downstream( chunk );
+		this.downstream( chunk, client.downClients );
 
 		setTimeout(function(){
-			this.requestNextJpeg( socket, 'interval');
+			this.requestNextJpeg( client, 'interval');
 		}.bind(this), this.interval);
 	}
 
@@ -108,19 +106,25 @@ module.exports = class MJpegHandler
 		this.downstream (chunk);
 	}
 
-	downstream( chunk ) 
+	downstream( chunk, downClients ) 
 	{
 		this.feedMjpegStream( chunk );
 
-		if (this.feed_list.length === 0) {
+		let feedList = this.feed_list;
+
+		if (feedList.length === 0) {
 			return;
 		}
 
-		this.eachClient(function each(client) {
-			client.send(chunk);
-		}, this.feed_list);
+		this.eachClient( function( client ) {
+			let index = feedList.indexOf( client );
+			if (index !== -1) {
+				client.send( chunk );
+				delete feedList[index];
+			}
+		}, downClients );
 
-		this.feed_list.length = 0;
+		feedList.length = 0;
 	}
 
 	onDownRequest (socket, req) 

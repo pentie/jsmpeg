@@ -8,8 +8,16 @@ var JsonMsg = function(options) {
 
 JsonMsg.prototype.write = function(buffer) {
 	JSMpeg.infos.reports = JSON.parse(buffer);
-	delete JSMpeg.infos.reports.cmd;
-	JSMpeg.onHeartbeatReport( JSMpeg.infos.reports );
+	var reports = JSMpeg.infos.reports; 	
+
+	if (reports.cmd == 'switchUpstream') {
+		console.log(reports);
+		return;
+	}
+
+	delete reports.cmd;
+	JSMpeg.infos.upstreams = reports.nodes[ reports.nodes.length - 1 ].upstreams; 
+	JSMpeg.onHeartbeatReport( reports );
 };
 
 return JsonMsg;

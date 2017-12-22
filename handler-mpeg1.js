@@ -38,9 +38,9 @@ module.exports = class Mpeg1VideoHandler
 		};
 	}
 
-	onUpConnect (socket, config) 
+	onUpConnect( client ) 
 	{
-		socket.send(JSON.stringify({
+		client.socket.send(JSON.stringify({
 			userId: this.nodeId,
 			handler: this.handlerName,
 			cmd: 'active',
@@ -48,9 +48,9 @@ module.exports = class Mpeg1VideoHandler
 		}));
 	}
 
-	onUpResponse (chunk, socket, config) 
+	onUpResponse( chunk, client ) 
 	{
-		this.downstream(chunk);
+		this.downstream( chunk, client.downClients );
 	}
 
 	feed (chunk) 
@@ -58,11 +58,11 @@ module.exports = class Mpeg1VideoHandler
 		this.chunker.write(chunk);
 	}
 
-	downstream (chunk) 
+	downstream( chunk, downClients ) 
 	{
 		this.eachClient(function(client) {
 			client.feedActive && client.send(chunk);
-		});
+		}, downClients);
 	}
 
 	onDownConnect (socket) 
@@ -72,8 +72,6 @@ module.exports = class Mpeg1VideoHandler
 
 	onDownRequest (socket, req) 
 	{
-		//console.log(req);
-
 		let userId = req.userId;
 		 
 		 switch (req.cmd) {
