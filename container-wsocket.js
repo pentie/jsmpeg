@@ -313,37 +313,56 @@ module.exports = class WebSocketHub
 		});
 	}
 
-	addSourcer (Sourcer) 
+	addSourcer( Sourcer ) 
 	{
 		this.sourcerClass.push(Sourcer);
 	}
 
-	addHandler (Handler) 
+	addHandler( Handler ) 
 	{
 		this.handlerClass.push(Handler);
 	}
 
 	findClient (callback, whiteList) 
 	{
-		let checkList = whiteList? whiteList : this.socketServer.clients;
-
 		let resClient = null;
-		for (var i=0; i < checkList.length; i++) {
-			let client = checkList[i]; 
-			if (client.readyState === WebSocket.OPEN) {
-				if (callback( client )) { 
+
+		if ( whiteList ) {
+			for ( var i=0; i < whiteList.length; i++ ) {
+				let client = whiteList[i]; 
+				if (client.readyState !== WebSocket.OPEN) {
+					continue;
+				}
+				if ( callback( client )) { 
 					resClient = client;
 					break;
 				}
 			}
+		} else {
+			this.socketServer.clients.forEach( function(client) {
+				if (client.readyState !== WebSocket.OPEN) {
+					return;
+				}
+				if ( callback( client )) { 
+					resClient = client;
+				}
+			});
 		}
+
 		return resClient;
 	}
 
-	eachClient (callback, whiteList) 
+	broadcast( chunk, whiteList ) 
 	{
-		if (whiteList) {
-			for (var i=0; i < whiteList.length; i++) {
+		this.eachClient(function(client){
+			client.send(chunk);
+		}, whiteList);
+	}
+
+	eachClient( callback, whiteList ) 
+	{
+		if ( whiteList ) {
+			for ( var i=0; i < whiteList.length; i++ ) {
 				let client = whiteList[i]; 
 				if (client.readyState === WebSocket.OPEN) {
 					callback(client);
@@ -356,13 +375,6 @@ module.exports = class WebSocketHub
 				}
 			});
 		}
-	}
-
-	broadcast( chunk, whiteList ) 
-	{
-		this.eachClient(function(client){
-			client.send(chunk);
-		}, whiteList);
 	}
 
 	getConfig() 

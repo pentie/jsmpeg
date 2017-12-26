@@ -1,4 +1,42 @@
 {
+	sourceNodes: [{
+		active: true,
+		port: 8070,
+		size: '1280x720',
+		defaultSource: 'localMp4-0001',
+		sources: [{
+			active: true,
+			caption: 'Local mp4 playlist',
+			name: 'localMp4-0001',
+			pluginName: 'localMp4',
+			loop: true,  
+			order: 'random', // asc, desc, random
+			recursive: false,
+			src: [ 'public/media' ]		
+		  },{
+			active: true,
+			caption: 'Local mp4 playlist',
+			name: 'localMp4-0002',
+			pluginName: 'localMp4',
+			loop: true,  
+			order: 'random', // asc, desc, random
+			recursive: false,
+			src: [ 'public/media/sub' ]		
+		  },{
+			active: false,
+			caption: 'Local usb camera',
+			name: 'usbCamera-0001',
+			pluginName: 'usbCamera',
+			src: [ '/dev/video0' ]
+		  },{
+			active: false,
+			caption: 'Video from webcamera',
+			name: 'webCamera-0001',
+			pluginName: 'webCamera',
+			src: [ 'http://127.0.0.1:8083/?action=stream' ]
+		}]
+	}],
+
 	source: {
 		usbCamera: {
 			caption: 'Local usb camera',
