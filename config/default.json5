@@ -74,13 +74,13 @@
 	centerNodes: [{
 		active: true,
 		port: 8080,
-		defaultSource: 'localMp4',
+		defaultSource: 'usbCamera',
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
 	    },{
-		active: true,
+		active: false,
 		port: 8081,
 		defaultSource: 'localMp4',
 		mpeg1MaxUser: 20,

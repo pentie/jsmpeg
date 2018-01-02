@@ -5,7 +5,7 @@ THIS_DIR=`dirname $(readlink -f $0)`
 main() 
 {
 	check_update
-	check_apt mplayer ffmpeg libudev-dev
+	check_apt mplayer ffmpeg libudev-dev v4l-utils
 
 	if [ "$1" = "client" ]; then
 		build_mjpg_streamer
