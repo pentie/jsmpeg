@@ -1,5 +1,6 @@
 
 const {JpegsFromUsbCamera} = require('./common-modules.js');
+const usbDetect = require('usb-detection');
 
 module.exports = class UsbCameraSource
 {
@@ -34,9 +35,40 @@ module.exports = class UsbCameraSource
 			return;
 		}
 
+		this.lastCmdObj = cmdObj;
+		this.lastCallback = callback;
+
 		this.source = new JpegsFromUsbCamera( this.config, devPath, this.feedProxy.bind(this) );
 		this.source.start( callback );
 		this.active = true;
+
+		usbDetect.startMonitoring();
+		usbDetect.on('add', this.onUsbInsert.bind(this));
+		usbDetect.on('remove', this.onUsbRemove.bind(this));
+	}
+
+	/*
+	devicie = {
+		locationId: 0,
+		vendorId: 5824,
+		productId: 1155,
+		deviceName: 'Teensy USB Serial (COM3)',
+		manufacturer: 'PJRC.COM, LLC.',
+		serialNumber: '',
+		deviceAddress: 11
+	}
+	*/
+	onUsbInsert( device )
+	{
+		console.log( device );
+
+	}
+
+	onUsbRemove( device )
+	{
+		console.log( device );
+
+
 	}
 
 	feedProxy( jpeg ) 
@@ -58,5 +90,6 @@ module.exports = class UsbCameraSource
 	{
 		this.active = false;
 		this.source && this.source.stop();
+		usbDetect.stopMonitoring();
 	}
 };
