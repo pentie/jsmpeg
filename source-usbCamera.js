@@ -17,6 +17,24 @@ module.exports = class UsbCameraSource
 		}
 	}
 
+	function getDevSerial( devPath, callback )
+	{
+		let cmdline = 'udevadm info --query=all ' + devPath + ' | grep "ID_SERIAL_SHORT" | awk -F \'=\' \'{print $2}\''
+
+		exec( cmdline, (error, stdout, stderr) => {
+			if (error) {
+				callback( error );
+				return;
+			}
+
+			if( stdout ) {
+				callback( null, stdout.trim() );
+				return;
+			}
+			callback( stderr );
+		});
+	}
+
 	list() 
 	{
 		return {
