@@ -1,7 +1,7 @@
 
 const { exec } = require('child_process');
 const { JpegsFromUsbCamera } = require('./common-modules.js');
-const usbDetect = require('usb-detection');
+const V4l2Monitor = require('./v4l2-detection.js');
 
 module.exports = class UsbCameraSource
 {
@@ -17,64 +17,61 @@ module.exports = class UsbCameraSource
 		this.currentCmdObj = {};
 
 		if (this.config.autoStart === true) {
-			this.start( {devPath: this.config.src[0] });
+			this.start();
 		}
 
-		usbDetect.startMonitoring();
-
-		usbDetect.on('add', (device)=>{
-			if( this.currentCmdObj.serialNumber == device.serialNumber ) {
-				this.onUsbInsert(device);
-			}
-		});
-
-		usbDetect.on('remove', (device)=>{
-			if( this.currentCmdObj.serialNumber == device.serialNumber ) {
-				this.onUsbRemove(device);
-			}
-		});
+		this.monitor = new V4l2Monitor();
+		this.monitor.on('add', this.onCaptureInsert.bind(this));
+		this.monitor.on('remove', this.onCaptureRemove.bind(this));
 	}
 
-	getUvcSerial( devPath, callback )
+	onCaptureInsert( devPath )
 	{
-		if ( this.serials === undefined ) {
-			this.serials = new Map();
-		}
+		console.log( 'camera added:', devPath );
 
-		if (this.serials.has( devPath )) {
-			callback( null, this.serials.get( devPath ));
-			return;
-		}
+		do {
+			if (this.config.forceStart) {
+				this.currentCmdObj.devPath = devPath;
+				break;
+			}
 
-		this.getDevSerial( devPath, (err, res) => {
-			callback( err, res );
-			res && this.serials.set( devPath, res );
-		});
-	}
-
-	getDevSerial( devPath, callback )
-	{
-		if (!devPath) {
-			callback('devPath is empty');
-			return;
-		}
-
-		let cmdline = 'udevadm info --query=all ' + devPath + ' | grep "ID_SERIAL" | awk -F \'=\' \'{print $2}\''
-
-		exec( cmdline, (error, stdout, stderr) => {
-			console.log( error, stdout, stderr );
-			if (error) {
-				callback( error );
+			if (this.currentCmdObj.devPath !== devPath) {
 				return;
 			}
 
-			if( stdout ) {
-				callback( null, stdout.trim() );
-				return;
+			if (this.exceptionShutdown) {
+				this.exceptionShutdown = false;
+				break;
 			}
-			callback( stderr );
+
+			if (this.active) {
+				break;
+			}
+
+
+			return;
+		} while( false );
+
+
+		this.currentCmdObj.sourceName = this.sourceName;
+		this.activeSource( this.currentCmdObj, (cmdline) => {
+			console.log('usb insert, playing: ', cmdline);
 		});
 	}
+
+	onCaptureRemove( devPath )
+	{
+		console.log( 'camera remove:', devPath );
+		if (this.active) {
+			if (this.currentCmdObj.devPath !== devPath) {
+				return;
+			}
+
+			this.activeSource('advertise');
+			this.exceptionShutdown= true;
+		}
+	}
+
 
 	list() 
 	{
@@ -88,70 +85,16 @@ module.exports = class UsbCameraSource
 
 	start( cmdObj, callback )
 	{
-		this.getUvcSerial( cmdObj.devPath, (err, res) => {
-			if (err) {
-				console.log( err );
-				return;
-			}
-
-			cmdObj.serialNumber = res;
-			console.log(cmdObj);
-
-			this.source = new JpegsFromUsbCamera( this.config, cmdObj.DevPath, this.feedProxy.bind(this) );
-			this.source.start( callback );
-			this.active = true;
-			this.currentCmdObj = cmdObj;
-
-		});
-	}
-
-	/*
-	devicie = {
-		locationId: 0,
-		vendorId: 5824,
-		productId: 1155,
-		deviceName: 'Teensy USB Serial (COM3)',
-		manufacturer: 'PJRC.COM, LLC.',
-		serialNumber: '',
-		deviceAddress: 11
-	}
-	*/
-
-	onUsbInsert( device )
-	{
-		console.log( device );
-
-		do {
-			if (this.exceptionShutdown) {
-				this.exceptionShutdown = false;
-				break;
-			}
-
-			if (this.active) {
-				break;
-			}
-
-			if (this.config.forceStart) {
-				break;
-			}
-
-			return;
-		} while( false );
-
-
-		this.currentCmdObj.sourceName = this.sourceName;
-		this.activeSource( this.currentCmdObj, (cmdline) => {
-			console.log('usb insert, playing: ', cmdline);
-		});
-	}
-
-	onUsbRemove( device )
-	{
-		console.log( device );
-		if (this.active) {
-			activeSource('advertise');
-			this.exceptionShutdown= true;
+		if (cmdObj === undefined) {
+			cmdObj = {devPath: this.config.src[0] };
 		}
+
+		console.log(cmdObj);
+
+		this.source = new JpegsFromUsbCamera( this.config, cmdObj.devPath, this.feedProxy.bind(this) );
+		this.source.start( callback );
+		this.active = true;
+		this.currentCmdObj = cmdObj;
 	}
 
 	feedProxy( jpeg ) 

@@ -1,7 +1,8 @@
 
-var ffmpeg = require('fluent-ffmpeg');
-var PassThroughStream = require('stream').PassThrough;
-var net = require('net');
+const ffmpeg = require('fluent-ffmpeg');
+const PassThroughStream = require('stream').PassThrough;
+const net = require('net');
+
 
 const SOI = new Buffer([0xff, 0xd8]);
 const EOI = new Buffer([0xff, 0xd9]);

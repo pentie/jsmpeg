@@ -84,7 +84,7 @@
 	centerNodes: [{
 		active: true,
 		port: 8080,
-		defaultSource: 'webCamera',
+		defaultSource: 'usbCamera',
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
