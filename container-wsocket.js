@@ -166,6 +166,21 @@ module.exports = class WebSocketHub
 
 	activeSource( cmdObj, callback )
 	{
+		let actived = this.sources.find( source =>  source.active );
+
+		if (cmdObj === undefined) {
+			return actived;
+		}
+
+		if (typeof cmdObj === 'string') {
+			let targetSource = this.sources.find( (source) => {  
+				return (source.sourceName == cmdObj);
+			});
+			actived.stop();
+			targetSource.start();
+			return;
+		}
+
 		let targetSource = cmdObj.sourceName;
 		this.sources.forEach(function(source) {
 			source.stop();

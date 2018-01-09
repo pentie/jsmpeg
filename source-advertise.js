@@ -3,11 +3,11 @@ const resolve = require('path').resolve;
 const dir = require('node-dir');
 const {JpegsFromMp4File} = require('./common-modules.js');
 
-module.exports = class LocalMp4Source
+module.exports = class AdvertiseSource
 {
 	constructor( env ) 
 	{
-		this.sourceName = 'localMp4';
+		this.sourceName = 'advertise';
 		this.feed = env.get('feed');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.size = this.config.size;

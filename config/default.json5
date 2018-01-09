@@ -40,6 +40,7 @@
 	source: {
 		usbCamera: {
 			caption: 'Local usb camera',
+			forceStart: true,
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 			src: [ '/dev/video0' ]
@@ -60,6 +61,15 @@
 			order: 'random', // asc, desc, random
 			src: [ 'public/media' ]		
 		},
+
+		advertise: {
+			caption: 'Advertisment mp4 playlist',
+			filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
+			size: '1280x720',
+			loop: 'yes',  // yes, no
+			order: 'random', // asc, desc, random
+			src: [ 'public/media' ]		
+		},
 	},
 
 	adminKeys: {
@@ -74,7 +84,7 @@
 	centerNodes: [{
 		active: true,
 		port: 8080,
-		defaultSource: 'usbCamera',
+		defaultSource: 'webCamera',
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,

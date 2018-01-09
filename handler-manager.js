@@ -232,7 +232,7 @@ module.exports = class ManagerHandler
 					break;
 				}
 
-				this.activeSource( req, function( cmdline ){
+				this.activeSource( req, (cmdline) => {
 					if (cmdline === null) {
 						console.log('source start error: parma error');
 						return;
