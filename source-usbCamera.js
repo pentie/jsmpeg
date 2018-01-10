@@ -48,7 +48,6 @@ module.exports = class UsbCameraSource
 				break;
 			}
 
-
 			return;
 		} while( false );
 
@@ -67,6 +66,7 @@ module.exports = class UsbCameraSource
 				return;
 			}
 
+			console.log('exception play advertise movies');
 			this.activeSource('advertise');
 			this.exceptionShutdown= true;
 		}

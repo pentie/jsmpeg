@@ -1,5 +1,5 @@
 
-const {Mpeg1tsFromJpegs} = require('./common-modules.js');
+const {writeBinFile, Mpeg1tsFromJpegs} = require('./common-modules.js');
 
 const DEFAULT_QSCALE = 8;
 const MAX_EXPIRE_TIME = 3600;
@@ -60,6 +60,8 @@ module.exports = class Mpeg1VideoHandler
 
 	downstream( chunk, downClients ) 
 	{
+		//console.log( chunk[0].toString(16) );
+		//writeBinFile( chunk );
 		this.eachClient(function(client) {
 			client.feedActive && client.send(chunk);
 		}, downClients);

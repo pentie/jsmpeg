@@ -24,6 +24,7 @@
     "node-machine-id": "^1.1.9",
     "node-usb-detection": "^1.0.2",
     "safe-buffer": "latest",
+    "tcp-port-used": "^0.1.2",
     "ultron": "latest",
     "uuid": "^3.1.0",
     "wait-for-port": "git+https://github.com/Chris927/wait-for-host.git",

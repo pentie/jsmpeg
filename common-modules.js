@@ -2,7 +2,40 @@
 const ffmpeg = require('fluent-ffmpeg');
 const PassThroughStream = require('stream').PassThrough;
 const net = require('net');
+const FileOnWrite = require('file-on-write');
+const fs = require('fs');
+const path = require('path');
 
+var writer = null;
+
+function writeBinFile( chunk ) 
+{
+	if (writer === null) {
+		let filePath = './temp/images';
+		if ( !fs.existsSync( filePath )) {
+			fs.mkdirSync( filePath );
+		}
+
+		fs.readdir( filePath, (err, files) => {
+			if (err) throw err;
+
+			for (const file of files) {
+				fs.unlink( path.join(filePath, file), err => {
+					if (err) throw err;
+				});
+			}
+		});
+
+		writer = new FileOnWrite({
+			path: filePath,
+			ext: '.ts',
+			filename: function(data) { 
+				return data[0].toString(16) + '_' + data.length + '_' + Date.now().toString();
+			}
+		});
+	}
+	writer.write( chunk );
+}
 
 const SOI = new Buffer([0xff, 0xd8]);
 const EOI = new Buffer([0xff, 0xd9]);
@@ -61,7 +94,7 @@ class ChunksFromFFmpegBase
 	}
 
 	onFFmepgEnd () {
-		console.log( this.constructor.name, ': Processing finished !');
+		console.log( this.constructor.name, ': ffmpeg processing finished !');
 	}
 
 	onError (err) {
@@ -103,7 +136,7 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 			.videoFilters( this.config.filter )
 			.size( this.config.size )
 			.on('start', callback)
-			.on('error', this.onError.bind(this))
+			.on('error', this.endCallback )
 			.on('end', this.endCallback );
 
 		this.command.run();
@@ -117,10 +150,11 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 
 class JpegsFromWebCamera extends JpegsFromFFmpegBase
 {
-	constructor( config, url, jpegsCallback ) 
+	constructor( config, url, jpegsCallback, endCallback ) 
 	{
 		super(config, jpegsCallback);
 		this.url = url;
+		this.endCallback = endCallback;
 	}
 
 	start (callback) 
@@ -133,8 +167,8 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 			.videoFilters( this.config.filter )
 			.size( this.config.size )
 			.on('start', callback)
-			.on('error', this.onError.bind(this))
-			.on('end', this.onFFmepgEnd.bind(this));
+			.on('error', this.endCallback )
+			.on('end', this.endCallback );
 		this.command.run();
 		return this;
 	}
@@ -214,6 +248,7 @@ class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
 }
 
 module.exports = {
+	writeBinFile,
 	JpegsFromWebCamera,
 	JpegsFromUsbCamera,
 	JpegsFromMp4File,

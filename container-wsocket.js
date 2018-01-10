@@ -534,29 +534,35 @@ module.exports = class WebSocketHub
 					return;
 				}
 
-				var signs = [];
 				if (typeof data === 'string') {
-					signs.push(data.charCodeAt(0));
-				} else {
-
-					var dataView = new DataView(data);
-					signs.push(dataView.getUint8(0));
-					signs.push(dataView.getUint16(0));
+					for (var i=0; i < handlers.length; i++) {
+						let handler = handlers[i];
+						if ( handler.handlerName == 'manager' ) {
+							handler.onUpResponse( data, client );
+							break;
+						}
+					}
+					return;
 				}
 
-				for (var i=0; i < handlers.length; i++) {
+				var dataView = new DataView(data);
+				if ( dataView.getUint16(0) === 0xFFD8 ) {
+					for (var i=0; i < handlers.length; i++) {
+						let handler = handlers[i];
+						if ( handler.handlerName == 'mjpeg' ) {
+							handler.onUpResponse( data, client );
+							break;
+						}
+					}
+					return;
+				}
+
+				for ( var i=0; i < handlers.length; i++ ) {
 					let handler = handlers[i];
-
-					if (typeof handler.onUpResponse !== "function") { 
-						continue;
+					if ( handler.handlerName == 'mpeg1' ) {
+						handler.onUpResponse( data, client );
 					}
-
-					if ( !signs.includes( handler.chunkHead )) {
-						continue;
-					}
-
-					handler.onUpResponse( data, client );
-				};
+				}
 			});
 
 			upstreamClient.config = config;

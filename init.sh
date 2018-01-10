@@ -12,6 +12,11 @@ main()
 
 		if pidof mjpg_streamer >/dev/null; then
 			log 'mjpg_streamer is running' 
+
+			if [ "$2" = 'kill' ]; then
+				kill -9 $(pidof mjpg_streamer)
+				log "mjpg_streamer was killed"
+			fi
 		else
 			local MJPG_WWW=/usr/local/share/mjpg-streamer/www
 			local src_size='1024x768'

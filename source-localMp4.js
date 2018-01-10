@@ -87,12 +87,12 @@ module.exports = class LocalMp4Source
 		} while(false);
 
 		console.log('playing: ', mp4File);
-		this.source = new JpegsFromMp4File( this.config, mp4File, this.feedProxy.bind(this), function(){
-			setImmediate( function(){
+		this.source = new JpegsFromMp4File( this.config, mp4File, this.feedProxy.bind(this), ()=>{
+			setImmediate( ()=>{
 				cmdObj.internalCall = true;
 				this.active && this.start( cmdObj );
-			}.bind(this));
-		}.bind(this)).start( callback );
+			});
+		}).start( callback );
 	}
 
 	getNewPlaylist( disableList, order, callback ) 

@@ -40,7 +40,7 @@
 	source: {
 		usbCamera: {
 			caption: 'Local usb camera',
-			forceStart: true,
+			forceStart: true, // if true, when a camera plugin, it would be autoplay
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 			src: [ '/dev/video0' ]
@@ -50,6 +50,8 @@
 			caption: 'Video from webcamera',
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
+			retryTimeMs: 500, //the retry interval in milliseconds 
+			timeOutMs: 10000000, //the amount of time to wait until port is available
 			src: [ 'http://127.0.0.1:8083/?action=stream' ]
 		},
 
@@ -84,13 +86,13 @@
 	centerNodes: [{
 		active: true,
 		port: 8080,
-		defaultSource: 'usbCamera',
+		defaultSource: 'webCamera',
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
 	    },{
-		active: false,
+		active: true,
 		port: 8081,
 		defaultSource: 'localMp4',
 		mpeg1MaxUser: 20,
