@@ -122,7 +122,8 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 	{
 		super(config, jpegsCallback);
 		this.mp4File = mp4File;
-		this.endCallback = endCallback;
+		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
+		this.errCallback = endCallback || this.onError.bind(this) ;
 	}
 
 	start( callback ) 
@@ -136,8 +137,8 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 			.videoFilters( this.config.filter )
 			.size( this.config.size )
 			.on('start', callback)
-			.on('error', this.endCallback )
-			.on('end', this.endCallback );
+			.on('error', this.errCallback)
+			.on('end', this.endCallback);
 
 		this.command.run();
 		return this;
@@ -154,7 +155,8 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 	{
 		super(config, jpegsCallback);
 		this.url = url;
-		this.endCallback = endCallback;
+		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
+		this.errCallback = endCallback || this.onError.bind(this) ;
 	}
 
 	start (callback) 
@@ -167,8 +169,8 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 			.videoFilters( this.config.filter )
 			.size( this.config.size )
 			.on('start', callback)
-			.on('error', this.endCallback )
-			.on('end', this.endCallback );
+			.on('error', this.errCallback)
+			.on('end', this.endCallback);
 		this.command.run();
 		return this;
 	}
@@ -180,11 +182,13 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 
 class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 {
-	constructor( config, devPath, jpegsCallback ) 
+	constructor( config, devPath, jpegsCallback, endCallback ) 
 	{
 		super( config, jpegsCallback );
 		this.devPath = devPath;
 		this.command = null;
+		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
+		this.errCallback = endCallback || this.onError.bind(this) ;
 	}
 
 	start( callback ) 
@@ -198,8 +202,8 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 			.videoFilters( this.config.filter )
 			.size( this.config.size )
 			.on('start', callback)
-			.on('error', this.onError.bind(this))
-			.on('end', this.onFFmepgEnd.bind(this));
+			.on('error', this.errCallback)
+			.on('end', this.endCallback);
 
 		this.command.run();
 		return this;
@@ -212,13 +216,15 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 
 class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
 {
-	constructor( config, mpegtsCallback, qscale=8 ) 
+	constructor( config, mpegtsCallback, qscale=8, endCallback ) 
 	{
 		super( config, mpegtsCallback );
 		this.qscale = qscale;
 		
 		this.input = new PassThroughStream();
 		this.input.on('error', this.onError.bind(this));
+		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
+		this.errCallback = endCallback || this.onError.bind(this) ;
 	}
 
 	write( chunk ) {
@@ -235,8 +241,8 @@ class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
 			.outputOptions(['-f mpegts', '-c:v mpeg1video', '-q:v '+ this.qscale, '-bf 0'])
 			.outputFps(30)
 			.on('start', callback)
-			.on('error', this.onError.bind(this))
-			.on('end', this.onFFmepgEnd.bind(this));
+			.on('error', this.errCallback)
+			.on('end', this.endCallback);
 
 		this.command.run();
 		return this;

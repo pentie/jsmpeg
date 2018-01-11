@@ -1,7 +1,7 @@
 
 const resolve = require('path').resolve;
 const dir = require('node-dir');
-const {JpegsFromMp4File} = require('./common-modules.js');
+const {JpegsFromMp4File} = require('./module-common.js');
 
 module.exports = class AdvertiseSource
 {

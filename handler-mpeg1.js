@@ -1,5 +1,5 @@
 
-const {writeBinFile, Mpeg1tsFromJpegs} = require('./common-modules.js');
+const {writeBinFile, Mpeg1tsFromJpegs} = require('./module-common.js');
 
 const DEFAULT_QSCALE = 8;
 const MAX_EXPIRE_TIME = 3600;

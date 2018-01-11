@@ -1,7 +1,7 @@
 
 const { exec } = require('child_process');
-const { JpegsFromUsbCamera } = require('./common-modules.js');
-const V4l2Monitor = require('./v4l2-detection.js');
+const { JpegsFromUsbCamera } = require('./module-common.js');
+const V4l2Monitor = require('./module-v4l2-detection.js');
 
 module.exports = class UsbCameraSource
 {

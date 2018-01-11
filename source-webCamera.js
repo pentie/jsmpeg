@@ -1,5 +1,5 @@
 
-const {JpegsFromWebCamera} = require('./common-modules.js');
+const {JpegsFromWebCamera} = require('./module-common.js');
 const tcpPortUsed = require('tcp-port-used');
 const url = require('url');
 
