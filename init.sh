@@ -82,12 +82,13 @@ git_update_exit()
 	check_git user.name 
 	check_git user.email
 	check_git push.default simple
+	check_git user.githubUserName 
 
 	local push_url=$(git remote get-url --push origin)
-	local user=$(git config --global --get user.name)
+	local githubUserName=$(git config --global --get user.githubUserName)
 
-	if ! echo $push_url | grep -q "${user}@"; then
-		local new_url=$(echo $push_url | sed -e "s/\/\//\/\/${user}@/g")
+	if ! echo $push_url | grep -q "${githubUserName}@"; then
+		local new_url=$(echo $push_url | sed -e "s/\/\//\/\/${githubUserName}@/g")
 		git remote set-url origin $new_url
 		echo "update remote url: $new_url"
 	fi
