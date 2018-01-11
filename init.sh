@@ -7,29 +7,6 @@ main()
 	check_update
 	check_apt mplayer ffmpeg libudev-dev v4l-utils
 
-	if [ "$1" = "client" ]; then
-		build_mjpg_streamer
-
-		if pidof mjpg_streamer >/dev/null; then
-			log 'mjpg_streamer is running' 
-
-			if [ "$2" = 'kill' ]; then
-				kill -9 $(pidof mjpg_streamer)
-				log "mjpg_streamer was killed"
-			fi
-		else
-			local MJPG_WWW=/usr/local/share/mjpg-streamer/www
-			local src_size='1024x768'
-			export LD_LIBRARY_PATH=/usr/local/lib/mjpg-streamer
-
-			mjpg_streamer -i "input_uvc.so -n -r ${src_size}" -o "output_http.so -p 8083 -w ${MJPG_WWW}" &
-
-			log 'mjpg_streamer was started' 
-		fi
-
-		exit 0
-	fi
-
 	if ! cmd_exists /usr/bin/node; then
 		log "installing nodejs"
 		curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
@@ -48,6 +25,82 @@ main()
 	cd $THIS_DIR
 
 	npm install
+}
+
+maintain()
+{
+	[ "$1" = "update" ] && git_update_exit $2
+	[ "$1" = "client" ] && mjpg_stream_exit $2
+}
+
+mjpg_stream_exit()
+{
+	build_mjpg_streamer
+
+	if pidof mjpg_streamer >/dev/null; then
+		log 'mjpg_streamer is running' 
+
+		if [ "$1" = 'kill' ]; then
+			kill -9 $(pidof mjpg_streamer)
+			log "mjpg_streamer was killed"
+		fi
+	else
+		local MJPG_WWW=/usr/local/share/mjpg-streamer/www
+		local src_size='1024x768'
+		export LD_LIBRARY_PATH=/usr/local/lib/mjpg-streamer
+
+		mjpg_streamer -i "input_uvc.so -n -r ${src_size}" -o "output_http.so -p 8083 -w ${MJPG_WWW}" &
+
+		log 'mjpg_streamer was started' 
+	fi
+	exit 0
+}
+
+check_git()
+{
+	local key="$1"
+	local defautVal="$2"
+	local value=$(git config --global --get ${key})
+
+	if [ -z "$value" ]; then
+		if [ -z $defautVal ]; then
+			read -p "Please input git config of \"${key}\": " GIT_CONFIG_INPUT
+		else
+			GIT_CONFIG_INPUT=$defautVal
+		fi
+
+		if [ -z "$GIT_CONFIG_INPUT" ]; then
+			echo "The input value is empty, exit"
+			exit 1;
+		fi
+		git config --global --add ${key} ${GIT_CONFIG_INPUT}
+	fi
+}
+
+git_update_exit()
+{
+	check_git user.name 
+	check_git user.email
+	check_git push.default simple
+
+	local push_url=$(git remote get-url --push origin)
+	local user=$(git config --global --get user.name)
+
+	if ! echo $push_url | grep -q "${user}@"; then
+		local new_url=$(echo $push_url | sed -e "s/\/\//\/\/${user}@/g")
+		git remote set-url origin $new_url
+		echo "update remote url: $new_url"
+	fi
+
+	local input_msg=$1
+	input_msg=${input_msg:="update"}
+
+	cd $THIS_DIR
+	git add .
+	git commit -m "${input_msg}"
+	git push
+
+	exit 0
 }
 
 build_mjpg_streamer()
@@ -136,4 +189,4 @@ cmd_exists()
     type "$1" > /dev/null 2>&1
 }
 
-main "$@"; exit $?
+maintain "$@"; main "$@"; exit $?
