@@ -403,6 +403,9 @@ module.exports = class WebSocketHub
 		this.config = this.configs.get('centerNodes')[parseInt(index)];
 		this.env.set('isCenter', this.isCenter);
 
+		this.config.setgid && process.setgid( this.config.setgid );
+		this.config.setuid && process.setuid( this.config.setuid );
+
 		let soureName = this.config.defaultSource;
 		this.configs.source[soureName].autoStart = true;
 
@@ -478,6 +481,11 @@ module.exports = class WebSocketHub
 
 			for (var index in this.config.upstreams) {
 				let config = this.config.upstreams[index];
+				if (config.active !== undefined) {
+					if (config.active !== true) {
+						continue;
+					}
+				}
 				if (theFirst === null) {
 					theFirst = config.name;
 				}

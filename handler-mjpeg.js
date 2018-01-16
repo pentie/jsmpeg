@@ -8,7 +8,6 @@ module.exports = class MJpegHandler
 		this.config = env.get('getConfig')();
 		this.cache = env.get('newCache')();
 		this.eachClient = env.get('eachClient');
-		this.chunkHead = 0xFFD8;	
 		this.feed_list = new Array();
 		this.upstreamLastTime = Date.now();
 

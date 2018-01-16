@@ -1,4 +1,5 @@
 
+const { exec } = require('child_process');
 const ffmpeg = require('fluent-ffmpeg');
 const PassThroughStream = require('stream').PassThrough;
 const net = require('net');
@@ -253,10 +254,79 @@ class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
 	}
 }
 
+class JpegsToLiveRtmp
+{
+	constructor( config, endCallback ) 
+	{
+		this.config = config;
+		this.input = new PassThroughStream();
+		this.input.on('error', endCallback);
+		this.endCallback = endCallback;
+	}
+
+	write( chunk ) {
+		this.input.write(chunk);	
+	}
+
+	onEnd( error ) 
+	{
+		this.endCallback( error );
+	}
+
+	onStart( cmdline ) 
+	{
+		console.log( this.constructor.name, cmdline);
+	}
+
+	start( startCallback ) 
+	{
+		startCallback = startCallback || this.onStart.bind(this); 
+
+		this.command = ffmpeg();
+		this.command.renice(5);
+
+		this.command.input(this.input);
+		this.command.inputFormat('mjpeg');
+
+		this.config.inputs.forEach( (config) => {
+			if (config.active !== undefined) {
+				if (config.active !== true) {
+					return;
+				}
+			}
+
+			this.command.input( config.inputFrom );
+			this.command.inputOptions( config.options );
+		});
+
+		this.config.outputs.forEach( (config) => {
+			if (config.active !== undefined) {
+				if (config.active !== true) {
+					return;
+				}
+			}
+
+			this.command.output( config.outputTo );
+			this.command.outputOptions( config.options );
+		});
+
+		this.command.on('start', startCallback )
+		this.command.on('error', this.onEnd.bind(this) );
+		this.command.on('end', this.onEnd.bind(this) );
+		this.command.run();
+		return this;
+	}
+
+	stop() {
+		this.command && this.command.kill();
+	}
+}
+
 module.exports = {
 	writeBinFile,
 	JpegsFromWebCamera,
 	JpegsFromUsbCamera,
 	JpegsFromMp4File,
-	Mpeg1tsFromJpegs
+	Mpeg1tsFromJpegs,
+	JpegsToLiveRtmp
 };

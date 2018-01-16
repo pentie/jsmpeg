@@ -4,8 +4,7 @@ THIS_DIR=`dirname $(readlink -f $0)`
 
 main() 
 {
-	check_update
-	check_apt mplayer ffmpeg libudev-dev v4l-utils
+	check_apt mplayer ffmpeg libudev-dev v4l-utils alsa-utils
 
 	if ! cmd_exists /usr/bin/node; then
 		log "installing nodejs"
@@ -18,10 +17,6 @@ main()
 		check_apt npm
 	fi
 
-	if ! cmd_exists /usr/bin/uglifyjs; then
-		npm install uglify-js -g
-	fi
-
 	cd $THIS_DIR
 
 	npm install
@@ -29,21 +24,54 @@ main()
 
 maintain()
 {
+	check_update
 	[ "$1" = "update" ] && git_update_exit $2
-	[ "$1" = "client" ] && mjpg_stream_exit $2
+	[ "$1" = "webcam" ] && mjpg_stream_exit $2
+	[ "$1" = "buildjs" ] && buildjs_exit $2
+}
+
+buildjs_exit()
+{
+	if ! cmd_exists /usr/local/bin/uglifyjs; then
+		npm install uglify-js -g
+	fi
+
+	uglifyjs \
+		src/jsmpeg.js \
+		src/video-element.js \
+		src/player.js \
+		src/buffer.js \
+		src/ajax.js \
+		src/ajax-progressive.js \
+		src/websocket.js \
+		src/source-disp.js \
+		src/ts.js \
+		src/decoder.js \
+		src/json-event.js \
+		src/mjpeg.js \
+		src/mpeg1.js \
+		src/mp2.js \
+		src/webgl.js \
+		src/canvas2d.js \
+		src/webaudio.js \
+		src/crc.js \
+		-o public/jsmpeg.min.js
+
+	exit 0
 }
 
 mjpg_stream_exit()
 {
 	build_mjpg_streamer
 
+	if [ "$1" = 'kill' ]; then
+		kill -9 $(pidof mjpg_streamer)
+		log "mjpg_streamer was killed"
+		exit 0
+	fi
+
 	if pidof mjpg_streamer >/dev/null; then
 		log 'mjpg_streamer is running' 
-
-		if [ "$1" = 'kill' ]; then
-			kill -9 $(pidof mjpg_streamer)
-			log "mjpg_streamer was killed"
-		fi
 	else
 		local MJPG_WWW=/usr/local/share/mjpg-streamer/www
 		local src_size='1024x768'

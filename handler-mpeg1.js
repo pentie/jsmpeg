@@ -10,7 +10,6 @@ module.exports = class Mpeg1VideoHandler
 	constructor(env) 
 	{
 		this.handlerName = 'mpeg1';
-		this.chunkHead = 0x47;	
 		this.eachClient = env.get('eachClient');
 		this.isCenter = env.get('isCenter');
 		this.config = env.get('getConfig')();

@@ -10,7 +10,6 @@ module.exports = class ManagerHandler
 		this.eachClient = env.get('eachClient');
 		this.defaultUpstream = env.get('defaultUpstream');
 		this.switchUpstream= env.get('switchUpstream');
-		this.chunkHead = 0x7b;	
 		this.upstreamSocket = null;
 		this.isCenter = env.get('isCenter');
 		this.handlerInfos = env.get('handlerInfos');
@@ -131,7 +130,7 @@ module.exports = class ManagerHandler
 
 	onDownRequest (socket, req) 
 	{
-		if (typeof req.to === 'undefined') {
+		if (req.to === undefined) {
 			req.to = this.nodeId;
 		}
 

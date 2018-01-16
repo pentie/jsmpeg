@@ -1,4 +1,3 @@
-
 const configs = require('config').get('playerNodes');
 const MPlayer = require('mplayer');
 const waitForPort = require('wait-for-port');

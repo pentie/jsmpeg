@@ -85,14 +85,65 @@
 
 	centerNodes: [{
 		active: true,
+		setgid: 1000,
+		setuid: 1000,
 		port: 8080,
 		defaultSource: 'webCamera',
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
+		livestreams: {
+			active: true,
+
+		    	inputs: [{
+				active: false,
+				name: 'local mic',
+				options: [
+					'-f alsa', 
+					'-ar 8000',
+					'-ac 2',
+				],
+				inputFrom: 'hw:0',
+			    },{
+				active: true,
+				name: 'local mic',
+				options: [
+					'-f pulse', 
+					'-ar 8000',
+					'-ac 2',
+				],
+				inputFrom: 'default',
+			    },{
+				active: false,
+				name: 'local mp3',
+				options: [
+					'-f lavfi',
+					'-re'
+				],
+				inputFrom: 'amovie=public/media/mp3/clapping.mp3:loop=0,asetpts=N/SR/TB',
+		    	}],
+
+		    	outputs : [{
+				active: true,
+				name: 'tencent video stream cloud',
+				options: [
+					'-f flv',
+					'-s 320x240',
+					'-r 10',
+					'-pix_fmt yuv420p',
+					'-b:v 256k',
+					'-c:v libx264',
+					'-b:a 96k',
+					'-c:a aac',
+				],
+				outputTo: 'rtmp://19924.livepush.myqcloud.com/live/19924_36df1fc778?bizid=19924&txSecret=7bb44799a3abf292921dde8886cb7762&txTime=5A5E217F'
+			    },{
+				active: false,
+		    	}],
+		}
 	    },{
-		active: true,
+		active: false,
 		port: 8081,
 		defaultSource: 'localMp4',
 		mpeg1MaxUser: 20,
@@ -109,10 +160,13 @@
 		mjpegUpdateInterval: 100,
 		mjpegStreamName: 'seed.mjpeg',
 		upstreams :[{
+			active: true,
+			default: true,
 			name: 'streamOne',
 			caption: 'The sample stream A',
 			url: 'ws://localhost:8080',
 		},{
+			active: false,
 			name: 'streamTwo',
 			caption: 'The sample stream B',
 			url: 'ws://localhost:8081',
@@ -125,11 +179,13 @@
 		mjpegUpdateInterval: 100,
 		mjpegStreamName: 'seed.mjpeg',
 		upstreams :[{
+			active: true,
 			default: true,
 			name: 'streamOne',
 			caption: 'The sample stream A',
 			url: 'ws://localhost:8080',
 		},{
+			active: false,
 			name: 'streamTwo',
 			caption: 'The sample stream B',
 			url: 'ws://localhost:8081',

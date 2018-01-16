@@ -1,4 +1,3 @@
-
 const argv = require('minimist')(process.argv.slice(2));
 const WebSocketHub = require('./container-wsocket.js'); 
 
@@ -29,4 +28,5 @@ wshub.addSourcer( require('./source-advertise.js') );
 wshub.addHandler( require('./handler-mpeg1.js') );
 wshub.addHandler( require('./handler-mjpeg.js') );
 wshub.addHandler( require('./handler-manager.js') );
+wshub.addHandler( require('./handler-stream.js') );
 wshub.runCenter( argv.index );
