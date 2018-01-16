@@ -283,8 +283,6 @@ class JpegsToLiveRtmp
 		startCallback = startCallback || this.onStart.bind(this); 
 
 		this.command = ffmpeg();
-		this.command.renice(5);
-
 		this.command.input(this.input);
 		this.command.inputFormat('mjpeg');
 

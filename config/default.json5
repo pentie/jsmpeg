@@ -96,6 +96,11 @@
 		livestreams: {
 			active: true,
 
+			// when remote rtmp server shutdown the channel, will retry 3000 seconds as default
+			retryMs: 3000,
+
+			//only one input item would be set to "true"
+			//the inputs below are audio inputs, will merged with main video
 		    	inputs: [{
 				active: false,
 				name: 'local mic',

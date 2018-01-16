@@ -13,6 +13,8 @@ module.exports = class LiveStreamHandler
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
 		this.livestreams = this.config.livestreams || { active: false };
+		this.streamActived = false;
+		this.retryMs = this.livestreams.retryMs || 3000;
 
 		if (!this.isCenter) {
 			console.log( this.handlerName, ' didn\'t run in center node');
@@ -24,18 +26,35 @@ module.exports = class LiveStreamHandler
 			return;
 		}
 
-		this.chunker = new JpegsToLiveRtmp( this.livestreams, this.onStreamEnd.bind(this) );
-		this.chunker.start( this.onStreamStart.bind(this) );
+		this.streamDelay();
+	}
+
+	streamDelay( delayMs )
+	{
+		if (delayMs === undefined) {
+			setImmediate( () => {
+				this.chunker = new JpegsToLiveRtmp( this.livestreams, this.onStreamEnd.bind(this) );
+				this.chunker.start( this.onStreamStart.bind(this) );
+			});
+		} else {
+			setTimeout( () => {
+				this.chunker = new JpegsToLiveRtmp( this.livestreams, this.onStreamEnd.bind(this) );
+				this.chunker.start( this.onStreamStart.bind(this) );
+			}, delayMs );
+		}
 	}
 
 	onStreamStart( cmdline )
 	{
+		this.streamActived = true;
 		console.log('live stream: ', cmdline);
 	}
 
 	onStreamEnd( error )
 	{
-		console.log('live stream end: ', error );
+		this.streamActived = false;
+		this.streamDelay( this.retryMs );
+		console.log('live stream end, restart after ', this.retryMs );
 	}
 
 	http( req, res )
@@ -53,7 +72,7 @@ module.exports = class LiveStreamHandler
 
 	feed( chunk ) 
 	{
-		this.chunker.write( chunk );
+		this.streamActived && this.chunker.write( chunk );
 	}
 
 	onDownRequest (socket, req) 
