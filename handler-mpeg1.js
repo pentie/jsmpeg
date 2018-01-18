@@ -2,8 +2,6 @@
 const {writeBinFile, Mpeg1tsFromJpegs} = require('./module-common.js');
 
 const DEFAULT_QSCALE = 8;
-const MAX_EXPIRE_TIME = 3600;
-const MAX_DELAY_TIME = 5000;
 
 module.exports = class Mpeg1VideoHandler 
 {
@@ -16,8 +14,10 @@ module.exports = class Mpeg1VideoHandler
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
 
+		this.mpeg1Qscale = this.config.mpeg1Qscale || DEFAULT_QSCALE;
+
 		if (this.isCenter) {
-			this.chunker = new Mpeg1tsFromJpegs( null, this.downstream.bind(this), DEFAULT_QSCALE );
+			this.chunker = new Mpeg1tsFromJpegs( null, this.downstream.bind(this), this.mpeg1Qscale);
 			this.chunker.start();
 		}
 	}
@@ -106,6 +106,9 @@ var redis = require("redis");
 var client = redis.createClient();
 var crc32 = require('js-crc').crc32;
 
+
+const MAX_EXPIRE_TIME = 3600;
+const MAX_DELAY_TIME = 5000;
 
 function _check_crc_routine ()
 {

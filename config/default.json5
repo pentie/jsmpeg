@@ -50,9 +50,24 @@
 			caption: 'Video from webcamera',
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
-			retryTimeMs: 500, //the retry interval in milliseconds 
-			timeOutMs: 10000000, //the amount of time to wait until port is available
-			src: [ 'http://127.0.0.1:8083/?action=stream' ]
+
+			//the retry interval in milliseconds 
+			retryTimeMs: 500, 
+
+			//the amount of time to wait until port is available
+			timeOutMs: 10000000, 
+
+			//the seconds between 2 discovery, but each discovery will takes 3000ms.
+			//so if onvifInterval=5000, means every 8000ms will scan new camera. 
+			onvifInterval: 5000, 
+
+			//authentication for onvif devices
+			user: 'testuser',
+			pass: '123456',
+
+			//define the constant ip address cameras
+			src: []
+			//src: [ 'http://192.168.2.73:8080/videofeed' ]
 		},
 
 		localMp4: {
@@ -88,7 +103,18 @@
 		setgid: 1000,
 		setuid: 1000,
 		port: 8080,
+
+		// when centerNode start, only one source will be run
 		defaultSource: 'webCamera',
+
+		/*
+		when the defaultSource is:
+		1) usbCamera,webCamera: will select source[defaultSource].src[defaultSourceIndex] as auto start target.
+		2) localMp4,advertise: will only pick the mp4 file of source[defaultSource].src[defaultSourceIndex], other directories will be ignored. If defaultSourceIndex set to -1, means all directories are  available 
+		*/
+		defaultSourceIndex: 0,
+
+		mpeg1Qscale: 12,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
@@ -96,11 +122,12 @@
 		livestreams: {
 			active: true,
 
-			// when remote rtmp server shutdown the channel, will retry 3000 seconds as default
+			// when thie remote rtmp server shutdown the channel, 
+			// this will retry in 3000 seconds as default
 			retryMs: 3000,
 
-			//only one input item would be set to "true"
-			//the inputs below are audio inputs, will merged with main video
+			// only one input item would be set to "true"
+			// the inputs below are audio inputs, will merged with main video
 		    	inputs: [{
 				active: false,
 				name: 'local mic',
@@ -142,7 +169,7 @@
 					'-b:a 96k',
 					'-c:a aac',
 				],
-				outputTo: 'rtmp://19924.livepush.myqcloud.com/live/19924_36df1fc778?bizid=19924&txSecret=7bb44799a3abf292921dde8886cb7762&txTime=5A5E217F'
+				outputTo: 'rtmp://19924.livepush.myqcloud.com/live/19924_36df1fc778?bizid=19924&txSecret=8e92d35b3cdb666b04b9f80d2c240ac5&txTime=5A60C47F'
 			    },{
 				active: false,
 		    	}],
@@ -151,6 +178,7 @@
 		active: false,
 		port: 8081,
 		defaultSource: 'localMp4',
+		mpeg1Qscale: 12,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,

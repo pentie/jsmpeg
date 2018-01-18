@@ -17,6 +17,15 @@ module.exports = class AdvertiseSource
 		this.file2Play = []
 		this.nowLoop = this.config.loop;
 		this.nowOrder = this.config.order;
+
+		if (this.config.autoStartIndex !== -1) {
+			for (var i=0; i<this.config.src.length; i++) {
+				if (i !== this.config.autoStartIndex) {
+					this.disableList.push( this.config.src[i] );
+				}
+			}
+		}
+
 		this.defaultCmdObj = {
 			disableList: [], 
 			order: this.nowOrder,

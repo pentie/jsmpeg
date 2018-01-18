@@ -11,10 +11,14 @@ module.exports = class UsbCameraSource
 		this.feed = env.get('feed');
 		this.activeSource = env.get('activeSource');
 		this.config = env.get('configs').get('source.' + this.sourceName);
+
 		this.size = this.config.size;
 		this.active = false;
 		this.exceptionShutdown = false;
 		this.currentCmdObj = {};
+
+		this.config.autoStartIndex = Math.max(this.config.autoStartIndex, 0);
+		this.config.autoStartIndex = Math.min(this.config.autoStartIndex, this.config.src.length-1);
 
 		if (this.config.autoStart === true) {
 			this.start();
@@ -86,7 +90,7 @@ module.exports = class UsbCameraSource
 	start( cmdObj, callback )
 	{
 		if (cmdObj === undefined) {
-			cmdObj = {devPath: this.config.src[0] };
+			cmdObj = {devPath: this.config.src[ this.config.autoStartIndex] };
 		}
 
 		console.log(cmdObj);

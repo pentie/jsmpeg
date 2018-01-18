@@ -408,6 +408,7 @@ module.exports = class WebSocketHub
 
 		let soureName = this.config.defaultSource;
 		this.configs.source[soureName].autoStart = true;
+		this.configs.source[soureName].autoStartIndex = this.config.defaultSourceIndex || 0;
 
 		this.startServer(this.config.port);
 		this.loadHandlers();
