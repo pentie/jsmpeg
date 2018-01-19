@@ -140,9 +140,22 @@ module.exports = class WebCameraSource
 				setTimeout(()=> {
 					this.start();
 				}, this.onvifInterval);
+
 				console.log( `not found webcam, start again after ${this.onvifInterval} ms` );
-				return;
+				let actived = this.activeSource();
+				if (actived && (actived.sourceName == 'advertise')) {
+					return;
+				}
+				console.log('fuck', actived? actived.sourceName: null);
+				this.activeSource('advertise');
+			} else {
+				console.log(`first active camera: ${cmdObj.url}.`);
+
+				this.activeSource( cmdObj, (ffmpegCmd) => {
+					console.log('webcam is comming, playing: ', ffmpegCmd);
+				});
 			}
+			return;
 		} else {
 			//As a remote call, url must be set explicitly
 			if (cmdObj.url === undefined) {
@@ -174,10 +187,12 @@ module.exports = class WebCameraSource
 			this.config.retryTimeMs, 
 			this.config.timeOutMs )
 		.then( ()=> {
+			console.log(`Port ${urlObj.port} on ${urlObj.hostname} is now in use.`);
+
 			this.activeSource( cmdObj, (ffmpegCmd) => {
 				console.log('webcam is back, playing: ', ffmpegCmd);
 			});
-			console.log(`Port ${urlObj.port} on ${urlObj.hostname} is now in use.`);
+
 		}, (err)=> {
 			console.log('tcpPortUsed error:', err.message);
 		});

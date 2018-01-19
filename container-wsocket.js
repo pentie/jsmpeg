@@ -166,26 +166,34 @@ module.exports = class WebSocketHub
 
 	activeSource( cmdObj, callback )
 	{
-		let actived = this.sources.find( source =>  source.active );
+		let actived = this.sources.find( (source) => { 
+			return source.active;
+		});
 
 		if (cmdObj === undefined) {
 			return actived;
 		}
 
+		actived && console.log( 'already actived: ', actived.sourceName );
+
 		if (typeof cmdObj === 'string') {
-			let targetSource = this.sources.find( (source) => {  
-				return (source.sourceName == cmdObj);
+			process.nextTick(()=>{
+				let targetSource = this.sources.find( (source) => {  
+					console.log(source.sourceName);
+					return (source.sourceName == cmdObj);
+				});
+
+				actived && actived.stop();
+				targetSource.start();
 			});
-			actived.stop();
-			targetSource.start();
 			return;
 		}
 
-		let targetSource = cmdObj.sourceName;
+		let targetSourceName = cmdObj.sourceName;
 		this.sources.forEach(function(source) {
 			source.stop();
-			if (source.sourceName === targetSource) {
-				setImmediate( function(){
+			if (source.sourceName === targetSourceName) {
+				setImmediate( ()=>{
 					source.start( cmdObj, callback );
 				});
 			}
@@ -194,13 +202,13 @@ module.exports = class WebSocketHub
 
 	loadSourcers ()
 	{
-		this.sourcerClass.forEach(function (Sourcer) {
+		this.sourcerClass.forEach((Sourcer) => {
 			let source = new Sourcer(this.env);
 			this.sources.push(source);
 			if (typeof source.http === 'function') { 
 				this.routeCmds[source.sourceName] = source.http.bind(source);
 			}
-		}.bind(this));
+		});
 	}
 
 	loadHandlers ()
