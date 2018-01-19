@@ -51,14 +51,14 @@
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 
-			//the retry interval in milliseconds 
+			//the retry interval in milliseconds, for camera url
 			retryTimeMs: 500, 
 
-			//the amount of time to wait until port is available
+			//the amount of time to wait until port is available, for camera url
 			timeOutMs: 10000000, 
 
-			//the seconds between 2 discovery, but each discovery will takes 3000ms.
-			//so if onvifInterval=5000, means every 8000ms will scan new camera. 
+			//the seconds between 2 discovery action, but each discovery will takes 3000ms.
+			//so if onvifInterval=5000, means every 8000ms will start new scanning. 
 			onvifInterval: 5000, 
 
 			//authentication for onvif devices
