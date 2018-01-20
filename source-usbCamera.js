@@ -13,6 +13,7 @@ module.exports = class UsbCameraSource
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.advConfig = env.get('configs').get('advertise');
 		this.advBox = new AdvertiseBox( this.advConfig, this.feedProxy.bind(this));
+		this.advBox.ownerName = this.sourceName;
 
 		this.size = this.config.size;
 		this.active = false;
@@ -123,7 +124,7 @@ module.exports = class UsbCameraSource
 				}
 			}
 
-			!this.advBox.active && this.advBox.start();
+			this.active && !this.advBox.active && this.advBox.start();
 		});
 
 		this.source.start( (cmdline )=>{
@@ -153,6 +154,7 @@ module.exports = class UsbCameraSource
 	stop ()
 	{
 		this.active = false;
+		this.advBox.stop();
 		this.source && this.source.stop();
 	}
 };

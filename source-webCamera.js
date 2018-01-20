@@ -16,6 +16,7 @@ module.exports = class WebCameraSource
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.advConfig = env.get('configs').get('advertise');
 		this.advBox = new AdvertiseBox( this.advConfig, this.feedProxy.bind(this));
+		this.advBox.ownerName = this.sourceName;
 
 		this.onvifInterval = this.config.onvifInterval || ONVIF_INTERVAL;
 		this.onvifList = [];
@@ -55,7 +56,7 @@ module.exports = class WebCameraSource
 		{
 			// internal call must wait for webcamera
 			if ((cmdObj = this.getCmdObj()) === null) {
-				console.log( `not found webcam, start again after ${this.onvifInterval} ms` );
+				console.log( `Not found webcam, start again after ${this.onvifInterval} ms` );
 				!this.advBox.active && this.advBox.start();
 
 				setTimeout(()=> {
@@ -77,39 +78,70 @@ module.exports = class WebCameraSource
 		callback( cmdObj.url );
 	}
 
-	start( cmdObj, callback )
+	waitSourceNotRunning( timeMs, callback )
 	{
-		if (this.isRunning) {
-			console.log('please stop first.');
-			callback( null );
+		if( ! this.isRunning ) {
+			callback( 0 );
 			return;
 		}
 
+		let beginTime = Date.now();
+
+		let startTimerId = setInterval(()=>{
+			let offset =  Date.now() - beginTime;
+
+			if (offset > timeMs) {
+				clearInterval( startTimerId );
+				callback( -1 );
+				return;
+			}
+
+			if( ! this.isRunning ) {
+				clearInterval( startTimerId );
+				callback( offset );
+			}
+		}, 10);
+	}
+
+	start( cmdObj, callback )
+	{
 		this.active = true;
-		this.waitAvailableWebcam( cmdObj, (mjpgUrl)=> {
-			this.source = new JpegsFromWebCamera( this.config, mjpgUrl, this.feedProxy.bind(this), (err)=>{
-				this.isRunning = false;
-				if (err) {
-					let errStr = err.toString();
-					if (errStr.indexOf('Connection refused') >= 0) {
-						console.log('ffmpeg lost the camera');
-					} else {
-						console.log( err );
+		this.waitSourceNotRunning( 3000, (useTimeMs) => {
+			if (useTimeMs === -1) {
+				console.log( 'Please run stop first, Too fast');
+				return;
+			}
+
+			if (useTimeMs > 0) {
+				console.log( 'Wait '+ useTimeMs + ' ms to start');
+			}
+
+			this.waitAvailableWebcam( cmdObj, (mjpgUrl)=> {
+				this.source = new JpegsFromWebCamera( this.config, mjpgUrl, this.feedProxy.bind(this), (err)=>{
+					this.isRunning = false;
+					if (err) {
+						let errStr = err.toString();
+						if (errStr.indexOf('Connection refused') >= 0) {
+							console.log('ffmpeg lost the camera');
+						}else 
+						if (errStr.indexOf('SIGKILL') >= 0) {
+							console.log('ffmpeg was killed');
+						} else {
+							console.log( err );
+						}
 					}
-				}
-				
-				this.source && this.source.stop();
-				this.active && this.waitWebcamBackAgain( mjpgUrl );
-			});
+					
+					this.source && this.source.stop();
+					this.active && this.waitWebcamBackAgain( mjpgUrl );
+				});
 
-			this.source.start( (cmdline )=>{
-				this.isRunning = true;
-				this.urgencyUrl = null;
-				this.advBox.stop();
-				callback( cmdline ); 
+				this.source.start( (cmdline )=>{
+					this.isRunning = true;
+					this.urgencyUrl = null;
+					this.advBox.stop();
+					callback && callback( cmdline ); 
+				});
 			});
-
-			this.defaultCmdObj.url = mjpgUrl;
 		});
 	}
 
@@ -146,22 +178,21 @@ module.exports = class WebCameraSource
 				return;
 			}
 
-			if (this.urgencyUrl) {
-				console.log('tcpPortUsed error after found urgencyUrl. waitup start');
-				this.stop();
-
-				let startTimerId = setInterval(()=>{
-					if( ! this.isRunning ) {
-						clearInterval( startTimerId );
-						this.start();
-					}
-				}, 100);
+			if (this.source.url !== mjpgUrl) {
+				console.log('tcpPortUsed found target url has changed');
 				return;
 			}
 
-			setTimeout(()=> {
+			if (this.urgencyUrl) {
+				console.log('tcpPortUsed error after found urgencyUrl. waitup start');
+				this.stop();
+				this.start();
+				return;
+			}
+
+			process.nextTick(()=> {
 				this.waitWebcamBackAgain( mjpgUrl );
-			}, 1000);
+			});
 		});
 	}
 
@@ -223,6 +254,7 @@ module.exports = class WebCameraSource
 	stop ()
 	{
 		this.active = false;
+		this.advBox.stop();
 		this.source && this.source.stop();
 	}
 

@@ -16,6 +16,7 @@ module.exports = class AdvertiseBox
 		this.file2Play = []
 		this.nowLoop = this.config.loop;
 		this.nowOrder = this.config.order;
+		this.ownerName = this.constructor.name;
 
 		this.defaultCmdObj = {
 			disableList: [], 
@@ -66,7 +67,7 @@ module.exports = class AdvertiseBox
 			return;
 		} while(false);
 
-		console.log('advertise: ', mp4File);
+		console.log(this.ownerName + ' advertise: ', mp4File);
 		this.source = new JpegsFromMp4File( this.config,mp4File,this.feedProxy.bind(this), ()=>{
 			setImmediate( ()=>{
 				cmdObj.internalCall = true;
