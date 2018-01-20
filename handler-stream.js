@@ -10,22 +10,33 @@ module.exports = class LiveStreamHandler
 		this.eachClient = env.get('eachClient');
 		this.isCenter = env.get('isCenter');
 		this.config = env.get('getConfig')();
+		this.configs = env.get('configs');
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
-		this.livestreams = this.config.livestreams || { active: false };
-		this.streamActived = false;
-		this.retryMs = this.livestreams.retryMs || 3000;
+		let liveName = this.config.get('livestream');
 
 		if (!this.isCenter) {
 			console.log( this.handlerName, ' didn\'t run in center node');
 			return;
 		}
 
-		if (this.livestreams.active !== true) {
+		this.livestreams = this.configs.get('livestreams');
+		this.livestream = null;
+		this.livestreams.some( (confItem) => {
+			if ( confItem.name === liveName ){
+				this.livestream = confItem;
+				return true;
+			}
+			return false;
+		});
+
+		if ( ! this.livestream ) {
 			console.log( 'Not found livestream config');
 			return;
 		}
 
+		this.streamActived = false;
+		this.retryMs = this.livestream.retryMs || 3000;
 		this.streamDelay();
 	}
 
@@ -33,12 +44,12 @@ module.exports = class LiveStreamHandler
 	{
 		if (delayMs === undefined) {
 			setImmediate( () => {
-				this.chunker = new JpegsToLiveRtmp( this.livestreams, this.onStreamEnd.bind(this) );
+				this.chunker = new JpegsToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
 				this.chunker.start( this.onStreamStart.bind(this) );
 			});
 		} else {
 			setTimeout( () => {
-				this.chunker = new JpegsToLiveRtmp( this.livestreams, this.onStreamEnd.bind(this) );
+				this.chunker = new JpegsToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
 				this.chunker.start( this.onStreamStart.bind(this) );
 			}, delayMs );
 		}
