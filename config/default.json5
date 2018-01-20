@@ -54,9 +54,9 @@
 	},
 
 	centerNodes: [{
-		active: false,
-		setgid: 1000,
-		setuid: 1000,
+		active: true,
+		// setgid: 1000,
+		// setuid: 1000,
 		port: 8080,
 
 		// when centerNode start, only one source will be run
@@ -74,63 +74,9 @@
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
-		livestreams: {
-			active: false,
-
-			// when thie remote rtmp server shutdown the channel, 
-			// this will retry in 3000 seconds as default
-			retryMs: 3000,
-
-			// only one input item would be set to "true"
-			// the inputs below are audio inputs, will merged with main video
-		    	inputs: [{
-				active: false,
-				name: 'local mic',
-				options: [
-					'-f alsa', 
-					'-ar 8000',
-					'-ac 2',
-				],
-				inputFrom: 'hw:0',
-			    },{
-				active: true,
-				name: 'local mic',
-				options: [
-					'-f pulse', 
-					'-ar 8000',
-					'-ac 2',
-				],
-				inputFrom: 'default',
-			    },{
-				active: false,
-				name: 'local mp3',
-				options: [
-					'-f lavfi',
-					'-re'
-				],
-				inputFrom: 'amovie=public/media/mp3/clapping.mp3:loop=0,asetpts=N/SR/TB',
-		    	}],
-
-		    	outputs : [{
-				active: true,
-				name: 'tencent video stream cloud',
-				options: [
-					'-f flv',
-					'-s 320x240',
-					'-r 10',
-					'-pix_fmt yuv420p',
-					'-b:v 256k',
-					'-c:v libx264',
-					'-b:a 96k',
-					'-c:a aac',
-				],
-				outputTo: 'rtmp://19924.livepush.myqcloud.com/live/19924_36df1fc778?bizid=19924&txSecret=8e92d35b3cdb666b04b9f80d2c240ac5&txTime=5A60C47F'
-			    },{
-				active: false,
-		    	}],
-		}
+		livestream: 'tencentCloudLive',
 	    },{
-		active: true,
+		active: false,
 		port: 8081,
 		defaultSource: 'usbCamera',
 		defaultSourceIndex: 0,
@@ -139,6 +85,62 @@
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
+	}],
+
+	livestreams: [{
+		name: 'tencentCloudLive',
+
+		// when thie remote rtmp server shutdown the channel, 
+		// this will retry in 3000 seconds as default
+		retryMs: 3000,
+
+		// only one input item would be set to "true"
+		// the inputs below are audio inputs, will merged with main video
+		inputs: [{
+			active: false,
+			name: 'local mic',
+			options: [
+				'-f alsa', 
+				'-ar 8000',
+				'-ac 2',
+			],
+			inputFrom: 'hw:0',
+		    },{
+			active: true,
+			name: 'local mic',
+			options: [
+				'-f pulse', 
+				'-ar 8000',
+				'-ac 2',
+			],
+			inputFrom: 'default',
+		    },{
+			active: false,
+			name: 'local mp3',
+			options: [
+				'-f lavfi',
+				'-re'
+			],
+			inputFrom: 'amovie=public/media/mp3/clapping.mp3:loop=0,asetpts=N/SR/TB',
+		}],
+
+		outputs : [{
+			active: true,
+			name: 'tencent video stream cloud',
+			options: [
+				'-f flv',
+				'-s 320x240',
+				'-r 10',
+				'-pix_fmt yuv420p',
+				'-b:v 256k',
+				'-c:v libx264',
+				'-b:a 96k',
+				'-c:a aac',
+			],
+			outputTo: 'rtmp://19924.livepush.myqcloud.com/live/19924_36df1fc778?bizid=19924&txSecret=8e92d35b3cdb666b04b9f80d2c240ac5&txTime=5A60C47F'
+		    },{
+			active: false,
+		}],
 	}],
 
 	adminKeys: {

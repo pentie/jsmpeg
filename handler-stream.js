@@ -13,17 +13,16 @@ module.exports = class LiveStreamHandler
 		this.configs = env.get('configs');
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
-		let liveName = this.config.get('livestream');
 
 		if (!this.isCenter) {
 			console.log( this.handlerName, ' didn\'t run in center node');
 			return;
 		}
 
-		this.livestreams = this.configs.get('livestreams');
 		this.livestream = null;
+		this.livestreams = this.configs.get('livestreams');
 		this.livestreams.some( (confItem) => {
-			if ( confItem.name === liveName ){
+			if ( confItem.name === this.config.livestream ){
 				this.livestream = confItem;
 				return true;
 			}
