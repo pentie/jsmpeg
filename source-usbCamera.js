@@ -39,6 +39,10 @@ module.exports = class UsbCameraSource
 	{
 		console.log( 'camera added:', devPath );
 
+		if (this.config.src.indexOf( devPath ) === -1) {
+			this.config.src.push( devPath );
+		} 
+
 		do {
 			if (this.config.forceStart) {
 				break;
@@ -66,16 +70,10 @@ module.exports = class UsbCameraSource
 		};
 		
 		this.stop();
-		let startTimerId = setInterval(()=>{
-			if( this.isRunning ) {
-				return;
-			}
-			clearInterval( startTimerId );
-			this.start( comdObj, (cmdline) => {
-				console.log('usb insert, playing: ', comdObj.devPath );
-			});
-		}, 10);
 
+		this.start( comdObj, (cmdline) => {
+			console.log('usb insert, playing: ', comdObj.devPath );
+		});
 	}
 
 	onCaptureRemove( devPath )
@@ -105,6 +103,32 @@ module.exports = class UsbCameraSource
 		};
 	}
 
+	waitSourceNotRunning( timeMs, callback )
+	{
+		if( ! this.isRunning ) {
+			callback( 0 );
+			return;
+		}
+
+		let beginTime = Date.now();
+
+		let startTimerId = setInterval(()=>{
+			let offset =  Date.now() - beginTime;
+
+			if (offset > timeMs) {
+				clearInterval( startTimerId );
+				callback( -1 );
+				return;
+			}
+
+			if( ! this.isRunning ) {
+				clearInterval( startTimerId );
+				callback( offset );
+			}
+		}, 10);
+	}
+
+
 	start( cmdObj, callback )
 	{
 		this.active = true;
@@ -112,28 +136,43 @@ module.exports = class UsbCameraSource
 			cmdObj = {devPath: this.config.src[ this.config.autoStartIndex] };
 		}
 
-		this.source = new JpegsFromUsbCamera( this.config, cmdObj.devPath, this.feedProxy.bind(this), (err)=>{
-			this.isRunning = false;
-			
-			if (err) {
-				let errStr = err.toString();
-				if (errStr.indexOf('SIGKILL') >= 0) {
-					console.log('ffmpeg was killed');
-				} else {
-					console.log( err );
-				}
+		this.waitSourceNotRunning( 3000, (useTimeMs) => {
+			if (useTimeMs === -1) {
+				console.log( 'Please run stop first, Too fast');
+				return;
 			}
 
-			this.active && !this.advBox.active && this.advBox.start();
-		});
+			if (useTimeMs > 0) {
+				console.log( 'Wait '+ useTimeMs + ' ms to start');
+			}
 
-		this.source.start( (cmdline )=>{
-			this.isRunning = true;
-			this.advBox.stop();
-			callback && callback( cmdline ); 
-		});
+			this.source = new JpegsFromUsbCamera( this.config, cmdObj.devPath, this.feedProxy.bind(this), (err)=>{
+				this.isRunning = false;
+				
+				if (err) {
+					let errStr = err.toString();
+					if (errStr.indexOf('SIGKILL') >= 0) {
+						console.log('ffmpeg was killed');
+					} else
+					if (errStr.indexOf('No such file or directory') >= 0) {
+						console.log('ffmpeg not found: ' + cmdObj.devPath);
+					} else {
+						console.log( err );
+					}
+				}
 
-		this.currentCmdObj = cmdObj;
+				this.active && !this.advBox.active && this.advBox.start();
+			});
+
+			this.source.start( (cmdline )=>{
+				this.isRunning = true;
+				this.advBox.stop();
+				callback && callback( cmdline ); 
+			});
+
+			this.currentCmdObj = cmdObj;
+		})
+
 	}
 
 	feedProxy( jpeg ) 

@@ -305,6 +305,10 @@ module.exports = class WebCameraSource
 						console.log('onvif lost the camera');
 						return;
 					}
+					if (errStr.indexOf('Network Error') >= 0) {
+						console.log('onvif Network Error');
+						return;
+					}
 					console.error(error);
 				});
 			});
