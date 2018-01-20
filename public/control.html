@@ -28,261 +28,289 @@
 	</div>
 	<script>
 
-	var client = getResponse( updateSourceList, onResponseMsg );
+function selectLocalMp4( disableList, order, loop )
+{
+	client.send(JSON.stringify({
+		userId: 'iamcontroleruserid',
+		to: 'center',
+		handler: 'manager',
+		cmd:  'selectSource',
+		sourceName: 'localMp4',
+		disableList: disableList,
+		order: order,
+		loop: loop
+	}));
+}
 
-	function onResponseMsg( res ) 
-	{
-		console.log( res );
+function selectWebcamera( url )
+{
+	client.send(JSON.stringify({
+		userId: 'iamcontroleruserid',
+		to: 'center',
+		handler: 'manager',
+		cmd:  'selectSource',
+		sourceName: 'webCamera',
+		url: url
+	}));
+}	
 
-		switch (res.cmd) {
-		  case 'getSourceList':
-			var li = '', tabdiv = '', selected = 0;
-			var sources = {};
-			for (var index in res.list) {
-				var item = res.list[index];
-				if (item.active) selected = index;
-				li += '<li id="li' + item.name + '" >' + item.caption + '</li>';
-				tabdiv += '<div id="' + item.name + '" ></div>';
-				sources[item.name] = item;
-			};
-
-		  	$('#tabs').html( '<ul>' + li + '</ul>'  + tabdiv);
-			$('#usbCamera').html('<div id="listboxUsbCamera"></div><div><input type="button" value="Submit" id="usbButton" /></div>');
-			$('#webCamera').html('<div id="listboxWebCamera"></div><div><input type="button" value="Submit" id="webButton" /></div>');
-			$('#localMp4').html('<div id="listboxMp4List"></div><div id="listboxMp4Files"></div>'
-					+'<div id="orderGroup">'
-						+'<button style="padding:4px 16px;" id="orderAsc">asc</button>'
-						+'<button style="padding:4px 16px;" id="orderDesc">desc</button>'
-						+'<button style="padding:4px 16px;" id="orderRandom">random</button>'
-					+'</div>'
-					+'<div id="loopGroup">'
-						+'<button style="padding:4px 16px;" id="loopYes">loop</button>'
-						+'<button style="padding:4px 16px;" id="loopNo">noloop</button>'
-					+'</div>'
-					+'<div><input type="button" value="Submit" id="mp4Button" /></div>');
-
-			$('#tabs').jqxTabs({ selectedItem: selected, width: '80%', position: 'top'});
-
-			$('#listboxUsbCamera').jqxListBox({width: 400, source: sources['usbCamera'].src, selectedIndex:0, checkboxes: false, height: 150});
-			$('#listboxWebCamera').jqxListBox({width: 400, source: sources['webCamera'].src, selectedIndex:0, checkboxes: false, height: 150});
+function selectUsbcamera( devPath )
+{
+	client.send(JSON.stringify({
+		userId: 'iamcontroleruserid',
+		to: 'center',
+		handler: 'manager',
+		cmd:  'selectSource',
+		sourceName: 'usbCamera',
+		devPath: devPath
+	}));
+}	
 
 
-			var mp4Item = sources['localMp4'];
-			var mp4Source = [];
-			var disableIndexs = [];
-			for (var keypath in mp4Item.onlineList) {
-				if (mp4Item.disableList.indexOf(keypath) !== -1) {
-					disableIndexs.push(mp4Source.length);
-				}
-				mp4Source.push({label: keypath, value: mp4Item.onlineList[keypath]});
+/******************************************************************
+*******************************************************************/
+
+var client = getResponse( updateSourceList, onResponseMsg );
+
+function onResponseMsg( res ) 
+{
+	console.log( res );
+
+	switch (res.cmd) {
+	  case 'getSourceList':
+		var li = '', tabdiv = '', selected = 0;
+		var sources = {};
+		for (var index in res.list) {
+			var item = res.list[index];
+			if (item.active) selected = index;
+			li += '<li id="li' + item.name + '" >' + item.caption + '</li>';
+			tabdiv += '<div id="' + item.name + '" ></div>';
+			sources[item.name] = item;
+		};
+
+		$('#tabs').html( '<ul>' + li + '</ul>'  + tabdiv);
+		$('#usbCamera').html('<div id="listboxUsbCamera"></div><div><input type="button" value="Submit" id="usbButton" /></div>');
+		$('#webCamera').html('<div id="listboxWebCamera"></div><div><input type="button" value="Submit" id="webButton" /></div>');
+		$('#localMp4').html('<div id="listboxMp4List"></div><div id="listboxMp4Files"></div>'
+				+'<div id="orderGroup">'
+					+'<button style="padding:4px 16px;" id="orderAsc">asc</button>'
+					+'<button style="padding:4px 16px;" id="orderDesc">desc</button>'
+					+'<button style="padding:4px 16px;" id="orderRandom">random</button>'
+				+'</div>'
+				+'<div id="loopGroup">'
+					+'<button style="padding:4px 16px;" id="loopYes">loop</button>'
+					+'<button style="padding:4px 16px;" id="loopNo">noloop</button>'
+				+'</div>'
+				+'<div><input type="button" value="Submit" id="mp4Button" /></div>');
+
+		$('#tabs').jqxTabs({ selectedItem: selected, width: '80%', position: 'top'});
+
+		$('#listboxUsbCamera').jqxListBox({width: 400, source: sources['usbCamera'].src, selectedIndex:0, checkboxes: false, height: 150});
+		$('#listboxWebCamera').jqxListBox({width: 400, source: sources['webCamera'].src, selectedIndex:0, checkboxes: false, height: 150});
+
+
+		var mp4Item = sources['localMp4'];
+		var mp4Source = [];
+		var disableIndexs = [];
+		for (var keypath in mp4Item.onlineList) {
+			if (mp4Item.disableList.indexOf(keypath) !== -1) {
+				disableIndexs.push(mp4Source.length);
 			}
-
-			console.log(mp4Source, disableIndexs);
-
-			$('#listboxMp4List').jqxListBox({width: 400, source: mp4Source, checkboxes: true, height: 150});
-			$('#listboxMp4List').jqxListBox('checkAll'); 
-			$('#listboxMp4List').on('select', function (event) {
-				if (event.args) {
-					var item = event.args.item;
-					if (item) {
-						console.log(item);
-						$('#listboxMp4Files').jqxListBox({source: item.value});
-						$('#listboxMp4Files').jqxListBox('refresh');
-					}
-				}
-			});
-			$("#listboxMp4Files").jqxListBox({width: 400, height: 150, enableSelection: false});
-
-			disableIndexs.forEach(function(index){
-				$('#listboxMp4List').jqxListBox('uncheckIndex', index);
-			});
-
-
-			$('#orderGroup').jqxButtonGroup({ mode: 'radio' });
-			$("#orderGroup").on('buttonclick', function (event) {
-				var clickedButton = event.args.button;
-				console.log("Clicked: " + clickedButton[0].id);
-			});
-			$('#loopGroup').jqxButtonGroup({ mode: 'radio' });
-			$("#loopGroup").on('buttonclick', function (event) {
-				var clickedButton = event.args.button;
-				console.log("Clicked: " + clickedButton[0].id);
-			});
-
-			switch (mp4Item.order) {
-				case 'asc':
-					$('#orderGroup').jqxButtonGroup('setSelection', 0);
-					break;
-				case 'desc':
-					$('#orderGroup').jqxButtonGroup('setSelection', 1);
-					break;
-				case 'random':
-					$('#orderGroup').jqxButtonGroup('setSelection', 2);
-					break;
-				default:
-					$('#orderGroup').jqxButtonGroup('setSelection', 0);
-			}
-			switch (mp4Item.loop) {
-				case 'yes':
-					$('#loopGroup').jqxButtonGroup('setSelection', 0);
-					break;
-				case 'no':
-					$('#loopGroup').jqxButtonGroup('setSelection', 1);
-					break;
-				default:
-					$('#loopGroup').jqxButtonGroup('setSelection', 0);
-			}
-
-			$('#usbButton').jqxButton({ width: 120, height: 40 });
-			$('#usbButton').on('click', function () {
-				var items = $("#listboxUsbCamera").jqxListBox('getSelectedItem'); 
-				var devPath = items.label;
-				client.send(JSON.stringify({
-					userId: 'iamcontroleruserid',
-					to: 'center',
-					handler: 'manager',
-					cmd:  'selectSource',
-					sourceName: 'usbCamera',
-					devPath: devPath
-				}));
-			});
-
-			$('#webButton').jqxButton({ width: 120, height: 40 });
-			$('#webButton').on('click', function () {
-
-			});
-
-			$('#mp4Button').jqxButton({ width: 120, height: 40 });
-			$('#mp4Button').on('click', function () {
-				var indexOfOrder = $('#orderGroup').jqxButtonGroup('getSelection');
-				var indexOfLoop = $('#loopGroup').jqxButtonGroup('getSelection');
-
-				var order = 'asc';
-				switch (indexOfOrder) {
-					case 0: order = 'asc'; break;
-					case 1: order = 'desc'; break;
-					case 2: order = 'random'; break;
-				}
-				var loop = 'yes';
-				switch (indexOfLoop) {
-					case 0: loop= 'yes'; break;
-					case 1: loop= 'no'; break;
-				}
-
-				var items = $('#listboxMp4List').jqxListBox('getItems'); 
-				var disableList = [];
-				items.forEach(function(item) {
-					if (item.checked) return;
-					disableList.push(item.label);
-				});
-				client.send(JSON.stringify({
-					userId: 'iamcontroleruserid',
-					to: 'center',
-					handler: 'manager',
-					cmd:  'selectSource',
-					sourceName: 'localMp4',
-					disableList: disableList,
-					order: order,
-					loop: loop
-				}));
-			});
-
-		  	break;
-		  case 'selectSource':
-
-		  	break;
+			mp4Source.push({label: keypath, value: mp4Item.onlineList[keypath]});
 		}
-	}
 
-	function updateSourceList() 
-	{
-		$('#content').html('<div id="tabs"></div>');
+		console.log(mp4Source, disableIndexs);
 
-		client.send(JSON.stringify({
-			userId: 'iamcontroleruserid',
-			to: 'center',
-			handler: 'manager',
-			cmd:  'getSourceList'
-		}));
-	}
-
-	function getResponse( onReady, onRecv )
-	{
-		return  wsClient( getUrl(), 500, function(event) {
-			if (event === null) {
-				onReady();
-				return;
+		$('#listboxMp4List').jqxListBox({width: 400, source: mp4Source, checkboxes: true, height: 150});
+		$('#listboxMp4List').jqxListBox('checkAll'); 
+		$('#listboxMp4List').on('select', function (event) {
+			if (event.args) {
+				var item = event.args.item;
+				if (item) {
+					console.log(item);
+					$('#listboxMp4Files').jqxListBox({source: item.value});
+					$('#listboxMp4Files').jqxListBox('refresh');
+				}
 			}
-			if (typeof event.data !== 'string') {
-				return;
-			}
-
-			let res = null;
-			try {
-				res = JSON.parse(event.data);
-			} catch (e) {}
-
-			if (res === null) {
-				return;
-			}
-
-			if (res.cmd === 'report') {
-				return;
-			}
-
-			onRecv( res );
 		});
-	}
+		$("#listboxMp4Files").jqxListBox({width: 400, height: 150, enableSelection: false});
+
+		disableIndexs.forEach(function(index){
+			$('#listboxMp4List').jqxListBox('uncheckIndex', index);
+		});
 
 
-	function getUrl()
-	{
-		if (document.location.port) {
-			return 'ws://'+document.location.hostname+':'+document.location.port;
-		} else {
-			return 'ws://'+document.location.hostname;
+		$('#orderGroup').jqxButtonGroup({ mode: 'radio' });
+		$("#orderGroup").on('buttonclick', function (event) {
+			var clickedButton = event.args.button;
+			console.log("Clicked: " + clickedButton[0].id);
+		});
+		$('#loopGroup').jqxButtonGroup({ mode: 'radio' });
+		$("#loopGroup").on('buttonclick', function (event) {
+			var clickedButton = event.args.button;
+			console.log("Clicked: " + clickedButton[0].id);
+		});
+
+		switch (mp4Item.order) {
+			case 'asc':
+				$('#orderGroup').jqxButtonGroup('setSelection', 0);
+				break;
+			case 'desc':
+				$('#orderGroup').jqxButtonGroup('setSelection', 1);
+				break;
+			case 'random':
+				$('#orderGroup').jqxButtonGroup('setSelection', 2);
+				break;
+			default:
+				$('#orderGroup').jqxButtonGroup('setSelection', 0);
 		}
+		switch (mp4Item.loop) {
+			case 'yes':
+				$('#loopGroup').jqxButtonGroup('setSelection', 0);
+				break;
+			case 'no':
+				$('#loopGroup').jqxButtonGroup('setSelection', 1);
+				break;
+			default:
+				$('#loopGroup').jqxButtonGroup('setSelection', 0);
+		}
+
+		$('#usbButton').jqxButton({ width: 120, height: 40 });
+		$('#usbButton').on('click', function () {
+			var items = $("#listboxUsbCamera").jqxListBox('getSelectedItem'); 
+			selectUsbcamera( items.label );
+		});
+
+		$('#webButton').jqxButton({ width: 120, height: 40 });
+		$('#webButton').on('click', function () {
+			var items = $("#listboxWebCamera").jqxListBox('getSelectedItem'); 
+			selectWebcamera( items.label );
+		});
+
+		$('#mp4Button').jqxButton({ width: 120, height: 40 });
+		$('#mp4Button').on('click', function () {
+			var indexOfOrder = $('#orderGroup').jqxButtonGroup('getSelection');
+			var indexOfLoop = $('#loopGroup').jqxButtonGroup('getSelection');
+
+			var order = 'asc';
+			switch (indexOfOrder) {
+				case 0: order = 'asc'; break;
+				case 1: order = 'desc'; break;
+				case 2: order = 'random'; break;
+			}
+			var loop = 'yes';
+			switch (indexOfLoop) {
+				case 0: loop= 'yes'; break;
+				case 1: loop= 'no'; break;
+			}
+
+			var items = $('#listboxMp4List').jqxListBox('getItems'); 
+
+			var disableList = [];
+			items.forEach(function(item) {
+				if (item.checked) return;
+				disableList.push(item.label);
+			});
+
+			selectLocalMp4( disableList, order, loop );
+		});
+
+		break;
+	  case 'selectSource':
+
+		break;
 	}
+}
 
-	function wsClient( url, interval, recv ) 
-	{
-		var WSClient = function() {
-			this.url = url;
-			this.interval = interval;
-			this.reconnectTimeoutId = 0;
-			this.recv = recv;
-		};
+function updateSourceList() 
+{
+	$('#content').html('<div id="tabs"></div>');
 
-		WSClient.prototype.start = function() {
-			this.socket = new WebSocket(this.url);
-			this.socket.binaryType = 'arraybuffer';
+	client.send(JSON.stringify({
+		userId: 'iamcontroleruserid',
+		to: 'center',
+		handler: 'manager',
+		cmd:  'getSourceList'
+	}));
+}
 
-			this.socket.onmessage = function incoming(data) {
-				this.recv(data);
-			}.bind(this);
+function getResponse( onReady, onRecv )
+{
+	return  wsClient( getUrl(), 500, function(event) {
+		if (event === null) {
+			onReady();
+			return;
+		}
+		if (typeof event.data !== 'string') {
+			return;
+		}
 
-			this.socket.onopen = function open(){
-				this.recv(null);
-			}.bind(this);
+		let res = null;
+		try {
+			res = JSON.parse(event.data);
+		} catch (e) {}
 
-			this.socket.onerror = this.onClose.bind(this);
-			this.socket.onclose = this.onClose.bind(this);
-			return this;
-		};
+		if (res === null) {
+			return;
+		}
 
-		WSClient.prototype.onClose = function(ev) {
-			clearTimeout(this.reconnectTimeoutId);
-			this.reconnectTimeoutId = setTimeout(function(){
-				this.start();	
-			}.bind(this), this.interval);
-		};
+		if (res.cmd === 'report') {
+			return;
+		}
 
-		WSClient.prototype.send = function(data) {
-			this.socket.send(data);
-		};
+		onRecv( res );
+	});
+}
 
-		return new WSClient().start();
+
+function getUrl()
+{
+	if (document.location.port) {
+		return 'ws://'+document.location.hostname+':'+document.location.port;
+	} else {
+		return 'ws://'+document.location.hostname;
 	}
+}
+
+function wsClient( url, interval, recv ) 
+{
+	var WSClient = function() {
+		this.url = url;
+		this.interval = interval;
+		this.reconnectTimeoutId = 0;
+		this.recv = recv;
+	};
+
+	WSClient.prototype.start = function() {
+		this.socket = new WebSocket(this.url);
+		this.socket.binaryType = 'arraybuffer';
+
+		this.socket.onmessage = function incoming(data) {
+			this.recv(data);
+		}.bind(this);
+
+		this.socket.onopen = function open(){
+			this.recv(null);
+		}.bind(this);
+
+		this.socket.onerror = this.onClose.bind(this);
+		this.socket.onclose = this.onClose.bind(this);
+		return this;
+	};
+
+	WSClient.prototype.onClose = function(ev) {
+		clearTimeout(this.reconnectTimeoutId);
+		this.reconnectTimeoutId = setTimeout(function(){
+			this.start();	
+		}.bind(this), this.interval);
+	};
+
+	WSClient.prototype.send = function(data) {
+		this.socket.send(data);
+	};
+
+	return new WSClient().start();
+}
 
 	</script>
 </body>

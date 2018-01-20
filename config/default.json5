@@ -1,42 +1,4 @@
 {
-	sourceNodes: [{
-		active: true,
-		port: 8070,
-		size: '1280x720',
-		defaultSource: 'localMp4-0001',
-		sources: [{
-			active: true,
-			caption: 'Local mp4 playlist',
-			name: 'localMp4-0001',
-			pluginName: 'localMp4',
-			loop: true,  
-			order: 'random', // asc, desc, random
-			recursive: false,
-			src: [ 'public/media' ]		
-		  },{
-			active: true,
-			caption: 'Local mp4 playlist',
-			name: 'localMp4-0002',
-			pluginName: 'localMp4',
-			loop: true,  
-			order: 'random', // asc, desc, random
-			recursive: false,
-			src: [ 'public/media/sub' ]		
-		  },{
-			active: false,
-			caption: 'Local usb camera',
-			name: 'usbCamera-0001',
-			pluginName: 'usbCamera',
-			src: [ '/dev/video0' ]
-		  },{
-			active: false,
-			caption: 'Video from webcamera',
-			name: 'webCamera-0001',
-			pluginName: 'webCamera',
-			src: [ 'http://127.0.0.1:8083/?action=stream' ]
-		}]
-	}],
-
 	source: {
 		usbCamera: {
 			caption: 'Local usb camera',
@@ -55,15 +17,18 @@
 			retryTimeMs: 500, 
 
 			//the amount of time to wait until port is available, for camera url
-			timeOutMs: 10000000, 
+			timeOutMs: 5000, 
 
 			//the seconds between 2 discovery action, but each discovery will takes 3000ms.
 			//so if onvifInterval=5000, means every 8000ms will start new scanning. 
 			onvifInterval: 5000, 
 
 			//authentication for onvif devices
-			user: 'testuser',
-			pass: '123456',
+			//user: 'testuser',
+			//pass: '123456',
+
+			//always switch to play the newest camera.	
+			alwaysNewest: true,
 
 			//define the constant ip address cameras
 			src: []
@@ -78,28 +43,18 @@
 			order: 'random', // asc, desc, random
 			src: [ 'public/media' ]		
 		},
-
-		advertise: {
-			caption: 'Advertisment mp4 playlist',
-			filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
-			size: '1280x720',
-			loop: 'yes',  // yes, no
-			order: 'random', // asc, desc, random
-			src: [ 'public/media' ]		
-		},
 	},
 
-	adminKeys: {
-		sourceAdmin: [ 
-			'e39a8be397992eb748be3975',
-		],
-		nodesAdmin: [
-			'e39a8be397992eb748be3975',
-		]
+	advertise: {
+		filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
+		size: '1280x720',
+		loop: 'yes',  // yes, no
+		order: 'random', // asc, desc, random
+		src: [ 'public/media' ]		
 	},
 
 	centerNodes: [{
-		active: true,
+		active: false,
 		setgid: 1000,
 		setuid: 1000,
 		port: 8080,
@@ -120,7 +75,7 @@
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
 		livestreams: {
-			active: true,
+			active: false,
 
 			// when thie remote rtmp server shutdown the channel, 
 			// this will retry in 3000 seconds as default
@@ -175,15 +130,25 @@
 		    	}],
 		}
 	    },{
-		active: false,
+		active: true,
 		port: 8081,
-		defaultSource: 'localMp4',
+		defaultSource: 'usbCamera',
+		defaultSourceIndex: 0,
 		mpeg1Qscale: 12,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 		mjpegStreamName: 'seed.mjpeg',
 	}],
+
+	adminKeys: {
+		sourceAdmin: [ 
+			'e39a8be397992eb748be3975',
+		],
+		nodesAdmin: [
+			'e39a8be397992eb748be3975',
+		]
+	},
 
 	relaysNodes: [{
 		active: true,
@@ -249,5 +214,43 @@
 		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
 		debug: true,
 		verbose: true
+	}],
+
+	sourceNodes: [{
+		active: true,
+		port: 8070,
+		size: '1280x720',
+		defaultSource: 'localMp4-0001',
+		sources: [{
+			active: true,
+			caption: 'Local mp4 playlist',
+			name: 'localMp4-0001',
+			pluginName: 'localMp4',
+			loop: true,  
+			order: 'random', // asc, desc, random
+			recursive: false,
+			src: [ 'public/media' ]		
+		  },{
+			active: true,
+			caption: 'Local mp4 playlist',
+			name: 'localMp4-0002',
+			pluginName: 'localMp4',
+			loop: true,  
+			order: 'random', // asc, desc, random
+			recursive: false,
+			src: [ 'public/media/sub' ]		
+		  },{
+			active: false,
+			caption: 'Local usb camera',
+			name: 'usbCamera-0001',
+			pluginName: 'usbCamera',
+			src: [ '/dev/video0' ]
+		  },{
+			active: false,
+			caption: 'Video from webcamera',
+			name: 'webCamera-0001',
+			pluginName: 'webCamera',
+			src: [ 'http://127.0.0.1:8083/?action=stream' ]
+		}]
 	}],
 }

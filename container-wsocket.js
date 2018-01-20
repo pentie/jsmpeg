@@ -55,7 +55,7 @@ module.exports = class WebSocketHub
 	}
 
 
-	startServer(port)
+	startServer( port, done )
 	{
 		let app = express();
 		app.use(express.static('public'));
@@ -105,9 +105,12 @@ module.exports = class WebSocketHub
 			socket.uuid = uuidv1();
 		}).bind(this));
 
-		this.webServer.listen(port, function listening() {
+		this.webServer.listen(port, ()=> {
 			console.log('Listening on %d', port);
-		}.bind(this));
+			process.nextTick(()=>{
+				done && done();
+			});
+		});
 
 		this.env.set('server', this.socketServer);
 	}
@@ -176,27 +179,15 @@ module.exports = class WebSocketHub
 
 		actived && console.log( 'already actived: ', actived.sourceName );
 
-		if (typeof cmdObj === 'string') {
-			process.nextTick(()=>{
-				let targetSource = this.sources.find( (source) => {  
-					console.log(source.sourceName);
-					return (source.sourceName == cmdObj);
-				});
-
-				actived && actived.stop();
-				targetSource.start();
+		process.nextTick(()=>{
+			this.sources.forEach(function(source) {
+				source.stop();
+				if (source.sourceName === cmdObj.sourceName) {
+					setTimeout(()=>{
+						source.start( cmdObj, callback );
+					}, 300);
+				}
 			});
-			return;
-		}
-
-		let targetSourceName = cmdObj.sourceName;
-		this.sources.forEach(function(source) {
-			source.stop();
-			if (source.sourceName === targetSourceName) {
-				setImmediate( ()=>{
-					source.start( cmdObj, callback );
-				});
-			}
 		});
 	}
 
@@ -418,9 +409,10 @@ module.exports = class WebSocketHub
 		this.configs.source[soureName].autoStart = true;
 		this.configs.source[soureName].autoStartIndex = this.config.defaultSourceIndex || 0;
 
-		this.startServer(this.config.port);
-		this.loadHandlers();
-		this.loadSourcers();
+		this.startServer( this.config.port, ()=>{
+			this.loadHandlers();
+			this.loadSourcers();
+		});
 	}
 
 	runRelays (index) 
@@ -430,10 +422,10 @@ module.exports = class WebSocketHub
 		this.env.set('isCenter', this.isCenter);
 		this.env.set('upstreams', this.config.upstreams);
 
-		this.startServer(this.config.port);
-		this.loadHandlers();
-
-		this.runUpstreams(this.config.upstreams);
+		this.startServer( this.config.port, ()=>{
+			this.loadHandlers();
+			this.runUpstreams(this.config.upstreams);
+		});
 	}
 
 	switchUpstream( socket, name ) 

@@ -3,13 +3,12 @@ const resolve = require('path').resolve;
 const dir = require('node-dir');
 const {JpegsFromMp4File} = require('./module-common.js');
 
-module.exports = class AdvertiseSource
+module.exports = class AdvertiseBox
 {
-	constructor( env ) 
+	constructor( config, feedCallback ) 
 	{
-		this.sourceName = 'advertise';
-		this.feed = env.get('feed');
-		this.config = env.get('configs').get('source.' + this.sourceName);
+		this.config = config;
+		this.feedCallback = feedCallback;
 		this.size = this.config.size;
 		this.active = false;
 		this.onlineList = {};
@@ -18,47 +17,19 @@ module.exports = class AdvertiseSource
 		this.nowLoop = this.config.loop;
 		this.nowOrder = this.config.order;
 
-		if (this.config.autoStartIndex !== -1) {
-			for (var i=0; i<this.config.src.length; i++) {
-				if (i !== this.config.autoStartIndex) {
-					this.disableList.push( this.config.src[i] );
-				}
-			}
-		}
-
 		this.defaultCmdObj = {
 			disableList: [], 
 			order: this.nowOrder,
 			loop: this.nowLoop
 		};
 
-		if (this.config.autoStart === true) {
-			this.start();
-		} else {
-			this.getNewPlaylist( [], this.nowOrder);
-		}
-	}
-
-	list()
-	{
-		return {
-			name: this.sourceName,
-			active: this.active,
-			caption: this.config.caption,
-			loop: this.nowLoop,
-			order: this.nowOrder,
-			disableList: this.disableList,
-			onlineList: this.onlineList
-		}
+		this.getNewPlaylist( [], this.nowOrder);
 	}
 
 	start( cmdObj, callback )
 	{
-		if (cmdObj === undefined) {
-			cmdObj = this.defaultCmdObj;
-		}
-
 		this.active = true;
+		cmdObj = cmdObj || this.defaultCmdObj;
 
 		if (cmdObj.internalCall !== true) {
 			this.file2Play.length = 0;
@@ -66,13 +37,13 @@ module.exports = class AdvertiseSource
 		}
 
 		if (this.file2Play.length === 0) {
-			this.getNewPlaylist( cmdObj.disableList, cmdObj.order, function( list ){
+			this.getNewPlaylist( cmdObj.disableList, cmdObj.order, (list)=>{
 				this.file2Play = list;
-				setImmediate( function(){
+				setImmediate( ()=>{
 					cmdObj.internalCall = true;
 					this.active && this.start( cmdObj );
-				}.bind(this));
-			}.bind(this));
+				});
+			});
 
 			this.disableList = cmdObj.disableList;
 			this.nowLoop = cmdObj.loop;
@@ -89,24 +60,24 @@ module.exports = class AdvertiseSource
 				return;
 			}
 
-			setImmediate( function(){
+			setImmediate( ()=>{
 				this.active && this.start( cmdObj );
-			}.bind(this));
+			});
 			return;
 		} while(false);
 
-		console.log('playing: ', mp4File);
-		this.source = new JpegsFromMp4File( this.config, mp4File, this.feedProxy.bind(this), function(){
-			setImmediate( function(){
+		console.log('advertise: ', mp4File);
+		this.source = new JpegsFromMp4File( this.config,mp4File,this.feedProxy.bind(this), ()=>{
+			setImmediate( ()=>{
 				cmdObj.internalCall = true;
 				this.active && this.start( cmdObj );
-			}.bind(this));
-		}.bind(this)).start( callback );
+			});
+		}).start( callback );
 	}
 
 	getNewPlaylist( disableList, order, callback ) 
 	{
-		this.updateOnlineList( this.config.src, order, function(onlineList){
+		this.updateOnlineList( this.config.src, order, (onlineList)=>{
 			let newList = [];
 			for (var path in onlineList) {
 				if (disableList.indexOf(path) === -1) {
@@ -115,7 +86,7 @@ module.exports = class AdvertiseSource
 			}
 			this.reOrderArray( newList, order );
 			callback && callback( newList );
-		}.bind(this));
+		});
 	}
 
 	updateOnlineList( mp4Paths, order, callback ) 
@@ -123,16 +94,16 @@ module.exports = class AdvertiseSource
 		let reOrderArray = this.reOrderArray;
 		let pathKeys = [];
 		let counter = 0;
-		mp4Paths.forEach(function( mp4Path) {
+		mp4Paths.forEach(( mp4Path)=> {
 			pathKeys.push( resolve( mp4Path ));
 			counter++;
-			dir.subdirs(mp4Path, function(err, subdirs) {
+			dir.subdirs(mp4Path, (err, subdirs)=> {
 				counter--;
 				if (err) {
 					console.log('updateOnlineList error', err);
 					return;
 				}
-				subdirs.forEach( function( path ){
+				subdirs.forEach( (path)=>{
 					pathKeys.push( resolve(path) );
 				});	
 
@@ -140,8 +111,8 @@ module.exports = class AdvertiseSource
 					this.onlineList = getPathsFiles( pathKeys );
 					callback( this.onlineList );
 				}
-			}.bind(this));
-		}.bind(this));
+			});
+		});
 
 		function getPathsFiles( paths ) {
 			var newList = {};
@@ -186,7 +157,7 @@ module.exports = class AdvertiseSource
 
 	feedProxy( jpeg ) 
 	{
-		this.active && this.feed( jpeg );
+		this.active && this.feedCallback( jpeg );
 	}
 
 	pause ()

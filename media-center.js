@@ -24,7 +24,6 @@ var wshub = new WebSocketHub( allConfigs );
 wshub.addSourcer( require('./source-webCamera.js') );
 wshub.addSourcer( require('./source-usbCamera.js') );
 wshub.addSourcer( require('./source-localMp4.js') );
-wshub.addSourcer( require('./source-advertise.js') );
 wshub.addHandler( require('./handler-mpeg1.js') );
 wshub.addHandler( require('./handler-mjpeg.js') );
 wshub.addHandler( require('./handler-manager.js') );

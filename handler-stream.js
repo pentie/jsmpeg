@@ -22,7 +22,7 @@ module.exports = class LiveStreamHandler
 		}
 
 		if (this.livestreams.active !== true) {
-			console.log( this.handlerName, ' not found livestream config');
+			console.log( 'Not found livestream config');
 			return;
 		}
 
