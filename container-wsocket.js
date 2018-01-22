@@ -476,7 +476,7 @@ module.exports = class WebSocketHub
 				}
 				let config = this.upstreamClients[upName].config;
 				if (config.default) {
-					return uName;
+					return upName;
 				}
 			};
 
