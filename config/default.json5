@@ -76,7 +76,7 @@
 		mjpegStreamName: 'seed.mjpeg',
 		//livestream: 'tencentCloudLive',
 	    },{
-		active: true,
+		active: false,
 		port: 8081,
 		defaultSource: 'usbCamera',
 		defaultSourceIndex: 0,

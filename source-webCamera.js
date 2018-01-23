@@ -78,6 +78,13 @@ module.exports = class WebCameraSource
 			return;
 		}
 
+		if (cmdObj.url === 'activeDiscovery') {
+			process.nextTick(()=> {
+				this.waitAvailableWebcam( null, callback );
+			});
+			return;
+		}
+
 		callback( cmdObj.url );
 	}
 
@@ -258,7 +265,7 @@ module.exports = class WebCameraSource
 
 	stop ()
 	{
-		this.startOnvif();
+		this.stopOnvif();
 		this.active = false;
 		this.advBox.stop();
 		this.source && this.source.stop();
@@ -290,6 +297,7 @@ module.exports = class WebCameraSource
 	onvifScan( callback )
 	{
 		onvif.startProbe().then(( devInfoList ) => {
+console.log(devInfoList);
 			devInfoList.forEach(( devInfo ) => {
 
 				let device = new onvif.OnvifDevice({

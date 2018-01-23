@@ -1,3 +1,5 @@
+### Fix bugs (2018-01-23)
+* while not in webcam mode, stop discovery for new webcam. but allways can be start manually
 
 ### Add onvif support (2018-01-19)
 * add onvifInterval=5000ms, control the internal of onvif camera discovery. The discovery need multicast support.
