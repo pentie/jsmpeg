@@ -528,7 +528,10 @@ module.exports = class WebSocketHub
 
 	runUpstreams( configs, interval = UPSTREAM_RECONNECT_INTERVAL ) 
 	{
-		configs.forEach( function( config ) {
+		configs.forEach( (config)=> {
+			if ( config.active !== true ) {
+				return;
+			}
 			let handlers = this.handlers;
 			let upstreamClient = this.wsClient( config.url, interval, function( data ){
 				var client = this;
@@ -578,7 +581,7 @@ module.exports = class WebSocketHub
 			upstreamClient.downClients = new Array();
 
 			this.upstreamClients[ config.name ] =  upstreamClient;
-		}.bind(this));
+		});
 	}
 
 	wsClient(url, interval, recv) 
