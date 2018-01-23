@@ -24,13 +24,11 @@ module.exports = class WebCameraSource
 
 		this.active = false;
 		this.isRunning = false;
+		this.onvifTimerId = null;
 		
 		if (this.config.autoStart === true) {
 			this.start();
 		}
-
-		// run the camera scanner
-		this.updateOnvif();
 	}
 
 	onFoundNewCamera( mjpgUrl )
@@ -46,6 +44,11 @@ module.exports = class WebCameraSource
 
 	waitAvailableWebcam( cmdObj, callback )
 	{
+		if ( ! this.active) {
+			console.log('drop the waitting for webcam');
+			return;
+		}
+
 		if (this.urgencyUrl) {
 			callback( this.urgencyUrl );
 			return;
@@ -105,6 +108,8 @@ module.exports = class WebCameraSource
 
 	start( cmdObj, callback )
 	{
+		this.startOnvif();
+
 		this.active = true;
 		this.waitSourceNotRunning( 3000, (useTimeMs) => {
 			if (useTimeMs === -1) {
@@ -253,24 +258,33 @@ module.exports = class WebCameraSource
 
 	stop ()
 	{
+		this.startOnvif();
 		this.active = false;
 		this.advBox.stop();
 		this.source && this.source.stop();
 	}
 
-	updateOnvif()
+	startOnvif()
 	{
-		this.onvifScan( (mjpgUrl) => {
-			if (this.onvifList.indexOf( mjpgUrl ) >= 0) {
-				return;
-			}
-			this.onvifList.push( mjpgUrl );
-			this.onFoundNewCamera( mjpgUrl );
-		});
-
-		setTimeout(()=> {
-			this.updateOnvif();
+		this.stopOnvif();
+		this.onvifTimerId = setInterval(()=>{
+			this.onvifScan( (mjpgUrl) => {
+				if (this.onvifList.indexOf( mjpgUrl ) >= 0) {
+					return;
+				}
+				this.onvifList.push( mjpgUrl );
+				this.onFoundNewCamera( mjpgUrl );
+			});
 		}, this.onvifInterval + 3000);
+		console.log('start onvif discovery');
+	}
+
+	stopOnvif()
+	{
+		if (this.onvifTimerId) {
+			clearInterval( this.onvifTimerId );
+			console.log('stop onvif discovery');
+		}
 	}
 
 	onvifScan( callback )

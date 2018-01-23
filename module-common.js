@@ -3,6 +3,7 @@ const { exec } = require('child_process');
 const ffmpeg = require('fluent-ffmpeg');
 const PassThroughStream = require('stream').PassThrough;
 const net = require('net');
+const uuidv1 = require('uuid/v1');
 const FileOnWrite = require('file-on-write');
 const fs = require('fs');
 const path = require('path');
@@ -85,6 +86,7 @@ class ChunksFromFFmpegBase
 	constructor( config, chunksCallback ) 
 	{
 		this.config = config;
+		this.jobId =  uuidv1();
 		this.output = new PassThroughStream();
 		this.output.on('data', chunksCallback );
 		this.output.on('error', this.onError.bind(this));
