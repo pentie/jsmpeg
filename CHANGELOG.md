@@ -1,3 +1,6 @@
+### Fix bugs (2018-01-26)
+* add advertise superisor routine, to force stop advertise while movie is playing
+
 ### Fix bugs (2018-01-23)
 * while not in webcam mode, stop discovery for new webcam. but allways can be start manually
 
