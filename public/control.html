@@ -90,7 +90,7 @@ function onResponseMsg( res )
 
 		$('#tabs').html( '<ul>' + li + '</ul>'  + tabdiv);
 		$('#usbCamera').html('<div id="listboxUsbCamera"></div><div><input type="button" value="Submit" id="usbButton" /></div>');
-		$('#webCamera').html('<div id="listboxWebCamera"></div><div><input type="button" value="Submit" id="webButton" /></div>');
+		$('#webCamera').html('<div id="listboxWebCamera"></div><div><input type="button" value="Submit" id="webButton" /><input type="button" value="discovery" id="webScanButton" /></div>');
 		$('#localMp4').html('<div id="listboxMp4List"></div><div id="listboxMp4Files"></div>'
 				+'<div id="orderGroup">'
 					+'<button style="padding:4px 16px;" id="orderAsc">asc</button>'
@@ -178,13 +178,26 @@ function onResponseMsg( res )
 		$('#usbButton').jqxButton({ width: 120, height: 40 });
 		$('#usbButton').on('click', function () {
 			var items = $("#listboxUsbCamera").jqxListBox('getSelectedItem'); 
+			console.log(items);
+
 			selectUsbcamera( items.label );
 		});
 
 		$('#webButton').jqxButton({ width: 120, height: 40 });
 		$('#webButton').on('click', function () {
 			var items = $("#listboxWebCamera").jqxListBox('getSelectedItem'); 
-			selectWebcamera( items.label );
+
+			var devPath = 'activeDiscovery';
+			if ( items ) {
+				devPath = items.label;
+			}
+
+			selectWebcamera( devPath );
+		});
+
+		$('#webScanButton').jqxButton({ width: 120, height: 40 });
+		$('#webScanButton').on('click', function () {
+			selectWebcamera( 'activeDiscovery' );
 		});
 
 		$('#mp4Button').jqxButton({ width: 120, height: 40 });
