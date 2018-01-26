@@ -33,6 +33,8 @@ module.exports = class UsbCameraSource
 		this.monitor = new V4l2Monitor();
 		this.monitor.on('add', this.onCaptureInsert.bind(this));
 		this.monitor.on('remove', this.onCaptureRemove.bind(this));
+
+		this.advBoxSupervisor();
 	}
 
 	onCaptureInsert( devPath )
@@ -195,5 +197,34 @@ module.exports = class UsbCameraSource
 		this.active = false;
 		this.advBox.stop();
 		this.source && this.source.stop();
+	}
+
+	advBoxSupervisor()
+	{
+		console.log( this.sourceName, 'start advBox Supervisor');
+		this.advErrorCounter = 0;
+
+		if (this.advBoxTimeInterval) {
+			clearInterval( this.advBoxTimeInterval );
+		}
+
+		this.advBoxTimeInterval = setInterval(()=>{
+			if ( ! this.advBox.active ) {
+				this.advErrorCounter = 0;
+				return;
+			}
+			if ( ! this.isRunning ) {
+				this.advErrorCounter = 0;
+				return;
+			}
+
+			this.advErrorCounter++;
+
+			if ( this.advErrorCounter >= 3 ) {
+				console.log( this.sourceName, 'force stop advBox');
+				this.advBox.stop();
+			}
+			this.advErrorCounter = 0;
+		}, 1000);
 	}
 };

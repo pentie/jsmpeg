@@ -29,6 +29,8 @@ module.exports = class WebCameraSource
 		if (this.config.autoStart === true) {
 			this.start();
 		}
+
+		this.advBoxSupervisor();
 	}
 
 	onFoundNewCamera( mjpgUrl )
@@ -258,10 +260,39 @@ module.exports = class WebCameraSource
 
 	stop ()
 	{
-		this.startOnvif();
+		this.stopOnvif();
 		this.active = false;
 		this.advBox.stop();
 		this.source && this.source.stop();
+	}
+
+	advBoxSupervisor()
+	{
+		console.log( this.sourceName, 'start advBox Supervisor');
+		this.advErrorCounter = 0;
+
+		if (this.advBoxTimeInterval) {
+			clearInterval( this.advBoxTimeInterval );
+		}
+
+		this.advBoxTimeInterval = setInterval(()=>{
+			if ( ! this.advBox.active ) {
+				this.advErrorCounter = 0;
+				return;
+			}
+			if ( ! this.isRunning ) {
+				this.advErrorCounter = 0;
+				return;
+			}
+
+			this.advErrorCounter++;
+
+			if ( this.advErrorCounter >= 3 ) {
+				console.log( this.sourceName, 'force stop advBox');
+				this.advBox.stop();
+			}
+			this.advErrorCounter = 0;
+		}, 1000);
 	}
 
 	startOnvif()
@@ -283,6 +314,7 @@ module.exports = class WebCameraSource
 	{
 		if (this.onvifTimerId) {
 			clearInterval( this.onvifTimerId );
+			this.onvifTimerId = null;
 			console.log('stop onvif discovery');
 		}
 	}
