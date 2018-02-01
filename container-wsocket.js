@@ -23,6 +23,7 @@ module.exports = class WebSocketHub
 		this.handlerClass = new Array();
 		this.sources = new Array();
 		this.sourcerClass = new Array();
+		this.missingClients = new Array();
 		this.upstreamClients = {};
 		this.routeCmds = {};
 
@@ -94,7 +95,12 @@ module.exports = class WebSocketHub
 				console.log('image feed err: '+err);	
 			});
 
-			this.switchUpstream( socket );
+			if ( ! this.isCenter) {
+				if ( this.switchUpstream( socket ) === null ) {
+					this.missingClients.push( socket );
+					console.log('switchUpstream error when connected');	
+				}
+			}
 
 			this.handlers.forEach(function(handler) {
 				if (typeof handler.onDownConnect === "function") { 
@@ -430,27 +436,33 @@ module.exports = class WebSocketHub
 
 	switchUpstream( socket, name ) 
 	{
-		if (this.isCenter) {
-			return null; 
+		if ( this.isCenter) {
+			return false;
 		}
 
-		if ( name === undefined ) {
+		if ( ! name ) {
 			name = this.defaultUpstream();
+			if ( ! name ) {
+				console.log( 'get defaultUpstream error when name=default' );
+				return false;
+			}
 		}
 
 		if( socket.upstreamName === name ) {
-			return;
+			return false;
 		}
 
 		if ( !this.upstreamClients.hasOwnProperty( name )) {
-			return;
+			return null;
 		}
 
-		if ( this.upstreamClients.hasOwnProperty( socket.upstreamName )) {
-			let oldDownClients = this.upstreamClients[socket.upstreamName].downClients;
-			let indexExists = oldDownClients.indexOf( socket );
-			if ( indexExists >= 0 ) {
-				oldDownClients.splice( indexExists, 1 );
+		if ( socket.upstreamName ) {
+			if ( this.upstreamClients.hasOwnProperty( socket.upstreamName )) {
+				let oldDownClients = this.upstreamClients[socket.upstreamName].downClients;
+				let indexExists = oldDownClients.indexOf( socket );
+				if ( indexExists >= 0 ) {
+					oldDownClients.splice( indexExists, 1 );
+				}
 			}
 		}
 
@@ -458,6 +470,7 @@ module.exports = class WebSocketHub
 		targetClients.push( socket );
 
 		socket.upstreamName = name;
+		return true;
 	}
 
 	defaultUpstream( name )
@@ -532,7 +545,19 @@ module.exports = class WebSocketHub
 			if ( config.active !== true ) {
 				return;
 			}
+
 			let handlers = this.handlers;
+
+			let sendToHandlers = function( handleName, data, client ){
+				for (var i=0; i < handlers.length; i++) {
+					let handler = handlers[i];
+					if ( handler.handlerName == handleName ) {
+						handler.onUpResponse( data, client );
+						break;
+					}
+				}
+			};
+
 			let upstreamClient = this.wsClient( config.url, interval, function( data ){
 				var client = this;
 
@@ -547,34 +572,17 @@ module.exports = class WebSocketHub
 				}
 
 				if (typeof data === 'string') {
-					for (var i=0; i < handlers.length; i++) {
-						let handler = handlers[i];
-						if ( handler.handlerName == 'manager' ) {
-							handler.onUpResponse( data, client );
-							break;
-						}
-					}
+					sendToHandlers( 'manager', data, client );
 					return;
 				}
 
 				var dataView = new DataView(data);
 				if ( dataView.getUint16(0) === 0xFFD8 ) {
-					for (var i=0; i < handlers.length; i++) {
-						let handler = handlers[i];
-						if ( handler.handlerName == 'mjpeg' ) {
-							handler.onUpResponse( data, client );
-							break;
-						}
-					}
+					sendToHandlers( 'mjpeg', data, client );
 					return;
 				}
 
-				for ( var i=0; i < handlers.length; i++ ) {
-					let handler = handlers[i];
-					if ( handler.handlerName == 'mpeg1' ) {
-						handler.onUpResponse( data, client );
-					}
-				}
+				sendToHandlers( 'mpeg1', data, client );
 			});
 
 			upstreamClient.config = config;
@@ -582,6 +590,13 @@ module.exports = class WebSocketHub
 
 			this.upstreamClients[ config.name ] =  upstreamClient;
 		});
+
+		if (this.missingClients.length) {
+			this.missingClients.forEach(( item ) => {
+				console.log('reSwitch upstreams');
+				this.switchUpstream( item );
+			});
+		}
 	}
 
 	wsClient(url, interval, recv) 

@@ -106,6 +106,10 @@ module.exports = class LocalMp4Source
 
 	getNewPlaylist( disableList, order, callback ) 
 	{
+		disableList = disableList.map( (x) => {
+			return resolve(x);
+		});
+
 		this.updateOnlineList( this.config.src, order, function(onlineList){
 			let newList = [];
 			for (var path in onlineList) {

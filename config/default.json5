@@ -41,7 +41,7 @@
 			size: '1280x720',
 			loop: 'yes',  // yes, no
 			order: 'random', // asc, desc, random
-			src: [ 'public/media' ]		
+			src: [ 'public/media/sub0', 'public/media/sub1', 'public/media/sub2' ]		
 		},
 	},
 
@@ -55,17 +55,51 @@
 
 	centerNodes: [{
 		active: true,
-		// setgid: 1000,
-		// setuid: 1000,
+		port: 8080,
+		defaultSource: 'localMp4',
+		defaultSourceIndex: 0,
+		mpeg1Qscale: 12,
+		mpeg1MaxUser: 20,
+		mjpegMaxUser: 200,
+		heartBeatInterval: 1000,
+		mjpegStreamName: 'seed.mjpeg',
+	},{
+		active: true,
+		port: 8081,
+		defaultSource: 'localMp4',
+		defaultSourceIndex: 1,
+		mpeg1Qscale: 12,
+		mpeg1MaxUser: 20,
+		mjpegMaxUser: 200,
+		heartBeatInterval: 1000,
+		mjpegStreamName: 'seed.mjpeg',
+	},{
+		active: true,
+		port: 8082,
+		defaultSource: 'localMp4',
+		defaultSourceIndex: 2,
+		mpeg1Qscale: 12,
+		mpeg1MaxUser: 20,
+		mjpegMaxUser: 200,
+		heartBeatInterval: 1000,
+		mjpegStreamName: 'seed.mjpeg',
+	},{
+		active: false,
 		port: 8080,
 
-		// when centerNode start, only one source will be run
+		// in livestream mode need pulse, and must run in non-root mode
+		// setgid: 1000,
+		// setuid: 1000,
+
+		// when centerNode init, only one source will be run
 		defaultSource: 'webCamera',
 
 		/*
 		when the defaultSource is:
 		1) usbCamera,webCamera: will select source[defaultSource].src[defaultSourceIndex] as auto start target.
-		2) localMp4,advertise: will only pick the mp4 file of source[defaultSource].src[defaultSourceIndex], other directories will be ignored. If defaultSourceIndex set to -1, means all directories are  available 
+		2) localMp4: will only pick the mp4 file of source[defaultSource].src[defaultSourceIndex], 
+			and other directories will be ignored. 
+			If defaultSourceIndex set to -1, means all directories are  available 
 		*/
 		defaultSourceIndex: 0,
 
@@ -167,13 +201,18 @@
 			caption: 'The sample stream A',
 			url: 'ws://localhost:8080',
 		},{
-			active: false,
+			active: true,
 			name: 'streamTwo',
 			caption: 'The sample stream B',
 			url: 'ws://localhost:8081',
+		},{
+			active: true,
+			name: 'streamThree',
+			caption: 'The sample stream C',
+			url: 'ws://localhost:8082',
 		}],
 	    },{
-		active: true,
+		active: false,
 		port: 8091,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
