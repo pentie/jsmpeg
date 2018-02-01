@@ -4,6 +4,7 @@ var gulp = require('gulp'),
   concat = require('gulp-concat'),
   sourcemaps = require('gulp-sourcemaps'),
   rename = require('gulp-rename'),
+  insert = require('gulp-insert'),
   uglify = require('gulp-uglify');
 
 gulp.task('default', function() {
@@ -31,6 +32,7 @@ gulp.task('default', function() {
     .pipe(gulp.dest('public'))
     // This will minify and rename to foo.min.js",
     .pipe(uglify())
+    .pipe(insert.prepend('/* build time: ' + (new Date()).toLocaleString() + ' */\n'))
     .pipe(rename({ extname: '.min.js' }))
     .pipe(sourcemaps.write('./'))
     .pipe(gulp.dest('public'));
