@@ -10,7 +10,7 @@ module.exports = class ManagerHandler
 		this.eachClient = env.get('eachClient');
 		this.defaultUpstream = env.get('defaultUpstream');
 		this.switchUpstream= env.get('switchUpstream');
-		this.upstreamSocket = null;
+		this.upstreamClient = null;
 		this.isCenter = env.get('isCenter');
 		this.handlerInfos = env.get('handlerInfos');
 		this.sourcerInfos = env.get('sourcerInfos');
@@ -53,9 +53,9 @@ module.exports = class ManagerHandler
 
 	onUpConnect( client ) 
 	{
-		this.upstreamSocket = client.socket;
+		this.upstreamClient = client;
 
-		client.socket.send(JSON.stringify({
+		this.upstreamClient.send(JSON.stringify({
 			handler: this.handlerName,
 			userId: this.nodeId,
 			cmd: 'getNodeId',
@@ -81,7 +81,7 @@ module.exports = class ManagerHandler
 
 				res.nodes.push(infos);
 
-				client.socket.send( JSON.stringify({
+				client.send( JSON.stringify({
 					handler: this.handlerName,
 					userId: this.nodeId,
 					cmd: 'report',
@@ -128,6 +128,33 @@ module.exports = class ManagerHandler
 		this.switchUpstream( socket );
 	}
 
+	respOk( socket, req, extObjs ) {
+		let res = {
+			status: 'ok',
+			cmd: req.cmd, 
+			msgid: req.msgid,
+			nodeId: this.nodeId
+		};
+
+		if (extObjs) {
+			for( var key in extObjs ) {
+				res[key] = extObjs[key];
+			}
+		}
+
+		socket.send(JSON.stringify(res));
+	}
+
+	respErr( socket, req, msg ) {
+		socket.send(JSON.stringify({
+			status: 'error',
+			error: msg,
+			cmd: req.cmd, 
+			msgid: req.msgid,
+			nodeId: this.nodeId
+		}));
+	}
+
 	onDownRequest (socket, req) 
 	{
 		if (req.to === undefined) {
@@ -146,7 +173,8 @@ module.exports = class ManagerHandler
 			}
 			req.crumbs.push(req.userId);
 			req.userId = this.nodeId;
-			this.upstreamSocket.send(JSON.stringify(req));
+
+			this.upstreamClient.send(JSON.stringify(req));
 			return;
 		}
 
@@ -160,27 +188,19 @@ module.exports = class ManagerHandler
 					return socket.uuid == req.uuid;
 				});
 
-				let resStatus = 'error';
 				if (targetSocket) {
 					this.switchUpstream( targetSocket, req.name );
-					resStatus = 'ok';
+					this.respOk(socket, req);
+					break;
 				}
 
-				socket.send(JSON.stringify({
-					status: resStatus,
-					cmd: req.cmd, 
-					nodeId: this.nodeId
-				}));
+				this.respErr( socket, req, 'target not found' );
 				break;
 
 			case 'switchUpstream':
 				console.log(req);
 				this.switchUpstream( socket, req.name );
-				socket.send(JSON.stringify({
-					status: 'ok',
-					cmd: req.cmd, 
-					nodeId: this.nodeId
-				}));
+				this.respOk(socket, req);
 				break;
 
 			case 'defaultUpstream':
@@ -188,24 +208,14 @@ module.exports = class ManagerHandler
 					break;
 				}
 				this.defaultUpstream( req.name );
-				socket.send(JSON.stringify({
-					status: 'ok',
-					cmd: req.cmd, 
-					nodeId: this.nodeId
-				}));
+				this.respOk(socket, req);
 				break;
 
 			case 'getNodeId':
-				let res = {
-					status: 'ok',
-					cmd: req.cmd, 
-					nodeId: this.nodeId
-				};
-				if (req.back) {
-					res.to = req.back;
-				}
-				socket.isNode = true;
-				socket.send(JSON.stringify(res));
+				this.respOk( socket, req, {
+					isNode: true,
+					to: req.back
+				});
 				break;
 
 			case 'report':
@@ -217,12 +227,9 @@ module.exports = class ManagerHandler
 					break;
 				}
 
-				socket.send(JSON.stringify({
-					status: 'ok',
-					cmd: req.cmd, 
-					nodeId: this.nodeId,
-					list:  this.sourcerInfos(),
-				}));
+				this.respOk( socket, req, {
+					list:  this.sourcerInfos()
+				});
 				break;
 
 			case 'selectSource':
@@ -237,12 +244,10 @@ module.exports = class ManagerHandler
 						return;
 					}
 					console.log('selectSource', cmdline);
-					socket.send(JSON.stringify({
-						status: 'ok',
-						cmd: req.cmd, 
-						nodeId: this.nodeId,
+
+					this.respOk( socket, req, {
 						cmdline: cmdline
-					}));
+					});
 				});
 				break;
 
