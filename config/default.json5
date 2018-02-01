@@ -76,8 +76,10 @@
 	},{
 		active: true,
 		port: 8082,
-		defaultSource: 'localMp4',
-		defaultSourceIndex: 2,
+		//defaultSource: 'localMp4',
+		//defaultSourceIndex: 2,
+		defaultSource: 'usbCamera',
+		defaultSourceIndex: 0,
 		mpeg1Qscale: 12,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
