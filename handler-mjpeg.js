@@ -80,7 +80,7 @@ module.exports = class MJpegHandler
 	{
 		let nowTime = Date.now();
 
-		client.socket.send(JSON.stringify({
+		client.send(JSON.stringify({
 			userId: this.nodeId,
 			handler: this.handlerName,
 			cmd: cmd,
