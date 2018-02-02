@@ -371,7 +371,7 @@ var JSMpeg =
 	Renderer: {},
 	AudioOutput: {}, 
 
-	CreateSingleVideo: function(elm, url) {
+	CreateSingleVideo: function(elm, url, res) {
 		if( !url ) {
 			url = elm.dataset.url;
 			if ( !url ) {
@@ -381,7 +381,7 @@ var JSMpeg =
 			}
 		}
 		elm.dataset.url = url;
-		var video_obj = new JSMpeg.VideoElement(elm);
+		var video_obj = new JSMpeg.VideoElement(elm, res);
 		window.video_objs = [ video_obj ];
 	},
 
