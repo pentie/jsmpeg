@@ -5,7 +5,7 @@
 			forceStart: true, // if true, when a camera plugin, it would be autoplay
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
-			src: [ '/dev/video0' ]
+			src: [ '/dev/video0', '/dev/video1' ]
 		},
 
 		webCamera: {
@@ -67,7 +67,7 @@
 	},{
 		active: true,
 		port: 8081,
-		allowSources: ['usbCamera', 'localMp4'],
+		allowSources: ['localMp4'],
 		defaultSource: 'localMp4',
 		defaultSourceIndex: 1,
 		mpeg1Qscale: 12,
@@ -80,7 +80,7 @@
 		port: 8082,
 		allowSources: ['usbCamera'],
 		defaultSource: 'usbCamera',
-		defaultSourceIndex: 0,
+		defaultSourceIndex: 1,
 		mpeg1Qscale: 12,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,

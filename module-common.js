@@ -148,7 +148,7 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 	}
 
 	stop() {
-		this.command && this.command.kill();
+		this.command && this.command.kill('SIGKILL');
 	}
 }
 
@@ -179,7 +179,7 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 	}
 
 	stop() {
-		this.command && this.command.kill();
+		this.command && this.command.kill('SIGKILL');
 	}
 }
 
@@ -213,7 +213,7 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 	}
 
 	stop() {
-		this.command && this.command.kill();
+		this.command && this.command.kill('SIGKILL');
 	}
 }
 
@@ -252,7 +252,7 @@ class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		this.command && this.command.kill();
+		this.command && this.command.kill('SIGKILL');
 	}
 }
 
@@ -318,7 +318,7 @@ class JpegsToLiveRtmp
 	}
 
 	stop() {
-		this.command && this.command.kill();
+		this.command && this.command.kill('SIGKILL');
 	}
 }
 

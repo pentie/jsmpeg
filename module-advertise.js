@@ -69,6 +69,9 @@ module.exports = class AdvertiseBox
 
 		console.log(this.ownerName + ' advertise: ', mp4File);
 		this.source = new JpegsFromMp4File( this.config,mp4File,this.feedProxy.bind(this), ()=>{
+			if ( ! this.active ) {
+				return;
+			}
 			setImmediate( ()=>{
 				cmdObj.internalCall = true;
 				this.active && this.start( cmdObj );
