@@ -19,7 +19,7 @@ module.exports = class WebCameraSource
 		this.feed = env.get('feed');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.advConfig = env.get('configs').get('advertise');
-		this.advBox = new AdvertiseBox( this.advConfig, this.feedProxy.bind(this));
+		this.advBox = new AdvertiseBox( this.advConfig, this.feedAdvertise.bind(this));
 		this.advBox.ownerName = this.sourceName;
 
 		this.onvifInterval = this.config.onvifInterval || ONVIF_INTERVAL;
@@ -253,6 +253,13 @@ module.exports = class WebCameraSource
 		return cmdObj;
 	}
 
+	feedAdvertise( jpeg ) 
+	{
+		if ( this.isRunning ) {
+			return;
+		}
+		this.active && this.feed( jpeg );
+	}
 
 	feedProxy( jpeg ) 
 	{
