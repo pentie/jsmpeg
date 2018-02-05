@@ -6,9 +6,13 @@ const AdvertiseBox = require('./module-advertise.js');
 
 module.exports = class UsbCameraSource
 {
+	static get name() { 
+		return 'usbCamera'; 
+	}
+
 	constructor( env ) 
 	{
-		this.sourceName = 'usbCamera';
+		this.sourceName = UsbCameraSource.name;
 		this.feed = env.get('feed');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.advConfig = env.get('configs').get('advertise');

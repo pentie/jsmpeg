@@ -5,9 +5,13 @@ const {JpegsFromMp4File} = require('./module-common.js');
 
 module.exports = class LocalMp4Source
 {
+	static get name() { 
+		return 'localMp4'; 
+	}
+
 	constructor( env ) 
 	{
-		this.sourceName = 'localMp4';
+		this.sourceName = LocalMp4Source.name;
 		this.feed = env.get('feed');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.size = this.config.size;

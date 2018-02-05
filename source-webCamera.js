@@ -9,9 +9,13 @@ const ONVIF_INTERVAL = 5000;
 
 module.exports = class WebCameraSource
 {
+	static get name() { 
+		return 'webCamera'; 
+	}
+
 	constructor(env) 
 	{
-		this.sourceName = 'webCamera';
+		this.sourceName = WebCameraSource.name;
 		this.feed = env.get('feed');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.advConfig = env.get('configs').get('advertise');

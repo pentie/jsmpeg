@@ -56,7 +56,7 @@
 	centerNodes: [{
 		active: true,
 		port: 8080,
-		allowSources: ['webCamera', 'usbCamera', 'localMp4'],
+		allowSources: ['localMp4'],
 		defaultSource: 'localMp4',
 		defaultSourceIndex: 0,
 		mpeg1Qscale: 12,
@@ -67,7 +67,7 @@
 	},{
 		active: true,
 		port: 8081,
-		allowSources: ['webCamera', 'usbCamera', 'localMp4'],
+		allowSources: ['usbCamera', 'localMp4'],
 		defaultSource: 'localMp4',
 		defaultSourceIndex: 1,
 		mpeg1Qscale: 12,
@@ -78,7 +78,7 @@
 	},{
 		active: true,
 		port: 8082,
-		allowSources: ['webCamera', 'usbCamera', 'localMp4'],
+		allowSources: ['usbCamera'],
 		defaultSource: 'usbCamera',
 		defaultSourceIndex: 0,
 		mpeg1Qscale: 12,

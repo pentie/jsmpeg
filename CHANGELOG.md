@@ -1,3 +1,7 @@
+
+### add support (2018-02-5)
+* in centerNode config add "allowSources" array, only load the Specified sources
+
 ### Fix bugs (2018-01-26)
 * add advertise superisor routine, to force stop advertise while movie is playing
 

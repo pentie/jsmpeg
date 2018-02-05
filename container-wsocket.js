@@ -197,15 +197,23 @@ module.exports = class WebSocketHub
 		});
 	}
 
-	loadSourcers ()
+	loadSourcers ( allowSources = [] )
 	{
+		let loadedSources = [];
 		this.sourcerClass.forEach((Sourcer) => {
+			if (allowSources.indexOf( Sourcer.name ) === -1) {
+				return;
+			}
+			loadedSources.push( Sourcer.name );
+
 			let source = new Sourcer(this.env);
 			this.sources.push(source);
 			if (typeof source.http === 'function') { 
 				this.routeCmds[source.sourceName] = source.http.bind(source);
 			}
 		});
+
+		console.log( 'loaded source: ', loadedSources );
 	}
 
 	loadHandlers ()
@@ -417,7 +425,7 @@ module.exports = class WebSocketHub
 
 		this.startServer( this.config.port, ()=>{
 			this.loadHandlers();
-			this.loadSourcers();
+			this.loadSourcers( this.config.allowSources );
 		});
 	}
 
