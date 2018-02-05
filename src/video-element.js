@@ -1,7 +1,11 @@
 JSMpeg.VideoElement = (function(){ "use strict";
 
-var VideoElement = function(element) {	
+var VideoElement = function(element, res) {	
 	var url = element.dataset.url;
+
+	if(!res) {
+		res = '1280x720';
+	}
 
 	if (!url) {
 		throw ("VideoElement has no `data-url` attribute");
@@ -16,14 +20,15 @@ var VideoElement = function(element) {
 
 	this.container = element;
 	addStyles(this.container, {
-		display: 'inline-block',
+		display: 'block',
 		position: 'relative',
 		minWidth: '80px', minHeight: '80px'
 	});
 
+	var wh = res.split("x")
 	this.canvas = document.createElement('canvas');
-	this.canvas.width = 960;
-	this.canvas.height = 540;
+	this.canvas.width = wh[0];
+	this.canvas.height = wh[1];
 	addStyles(this.canvas, {
 		display: 'block',
 		width: '100%'

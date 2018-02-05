@@ -56,6 +56,55 @@ var JSMpeg =
 		}.bind(this));
 	},
 
+	standardDeviation: function (values) {
+		var average = function (data) {
+			var sum = data.reduce(function (sum, value) { return sum + value; }, 0);
+			var avg = sum / data.length;
+			return avg;
+		};
+
+		var avg = average(values);
+		var avgSquareDiff = average(values.map(function (value) {
+			var diff = value - avg;
+			var sqrDiff = diff * diff;
+			return sqrDiff;
+		}));
+
+		return Math.ceil(Math.sqrt(avgSquareDiff));
+	},
+
+	testEcho: function (urlbase, callback, timeout) {
+		
+		timeout = timeout? timeout : 5000;  
+		var url = urlbase + 'manager/echo';
+		var xhr = new XMLHttpRequest();
+		xhr.onerror = function (e) { callback('error'); };
+		xhr.onload = function() {
+			var res = null;
+			try {
+				res = JSON.parse( xhr.responseText );
+			} catch (e) {}
+
+			if (res === null) {
+				callback('formatError');
+			}
+
+			callback(null, res);
+		};
+
+		xhr.open('GET', url, true);
+		xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+		xhr.send('');
+		setTimeout(function() {
+			if (xhr.readyState !== XMLHttpRequest.DONE) {
+				xhr.abort();
+				callback('timeout');
+			}
+		}, timeout);
+
+
+	},
+
 	switchUpstream: function( name, sourceIndex )
 	{
 		if (!this.infos.upstreams) {
@@ -103,6 +152,7 @@ var JSMpeg =
 			}
 
 			nameValid = true;
+			break;
 		}
 
 		var source = this.getSource( sourceIndex );
@@ -321,6 +371,20 @@ var JSMpeg =
 	Renderer: {},
 	AudioOutput: {}, 
 
+	CreateSingleVideo: function(elm, url, res) {
+		if( !url ) {
+			url = elm.dataset.url;
+			if ( !url ) {
+				var urlobj = new URL(document.location.href);
+				urlobj.protocol = "ws";
+				url = urlobj.href
+			}
+		}
+		elm.dataset.url = url;
+		var video_obj = new JSMpeg.VideoElement(elm, res);
+		window.video_objs = [ video_obj ];
+	},
+
 	CreateVideoElements: function() {
 		window.video_objs = [];
 		var elements = document.querySelectorAll('.jsmpeg');
@@ -362,10 +426,11 @@ var JSMpeg =
 };
 
 // Automatically create players for all found <div class="jsmpeg"/> elements.
+/*
 if (document.readyState === 'complete') {
 	JSMpeg.CreateVideoElements();
 }
 else {
 	document.addEventListener('DOMContentLoaded', JSMpeg.CreateVideoElements);
 }
-
+*/
