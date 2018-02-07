@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>JSMpeg Stream Control Client</title>
+
+	<link rel="stylesheet" href="http://cdnjs.cat.net/ajax/libs/twitter-bootstrap/4.0.0/css/bootstrap.css">
+	<style type="text/css">
+	</style>
+	
+	<script type="text/javascript" src="http://cdnjs.cat.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+
+	<div class="container-fluid">
+		<div class="jumbotron">
+			<h1 class="display-4">视频节点实时数据</h1>
+			<p class="lead">服务器时间： <span id="reporttime" ></span></p>
+			<ul class="list-group">
+				<li class="list-group-item d-flex justify-content-between align-items-center">
+					视频在线终端
+					<span id="wsClientCount" class="badge badge-primary badge-pill">0</span>
+				</li>
+				<li class="list-group-item d-flex justify-content-between align-items-center">
+					mjpegActiveCount
+					<span id="mjpegActiveCount" class="badge badge-primary badge-pill">0</span>
+				</li>
+				<li class="list-group-item d-flex justify-content-between align-items-center">
+					mjpegClientCount
+					<span id="mjpegClientCount" class="badge badge-primary badge-pill">0</span>
+				</li>
+				<li class="list-group-item d-flex justify-content-between align-items-center">
+					mpeg1ActiveCount
+					<span id="mpeg1ActiveCount" class="badge badge-primary badge-pill">0</span>
+				</li>
+				<li class="list-group-item d-flex justify-content-between align-items-center">
+					mpeg1ClientCount
+					<span id="mpeg1ClientCount" class="badge badge-primary badge-pill">0</span>
+				</li>
+			</ul>
+		</div>
+	</div>
+	<script>
+
+function getUrl()
+{
+	// return "ws://192.168.51.116:8090";
+	if (document.location.port) {
+		return 'ws://'+document.location.hostname+':'+document.location.port;
+	} else {
+		return 'ws://'+document.location.hostname;
+	}
+}
+
+function wsClient( url, interval, recv ) 
+{
+	var WSClient = function() {
+		this.url = url;
+		this.interval = interval;
+		this.reconnectTimeoutId = 0;
+		this.recv = recv;
+	};
+
+	WSClient.prototype.start = function() {
+		this.socket = new WebSocket(this.url);
+		this.socket.binaryType = 'arraybuffer';
+
+		this.socket.onmessage = function incoming(data) {
+			this.recv(data);
+		}.bind(this);
+
+		this.socket.onopen = function open(){
+			this.recv(null);
+		}.bind(this);
+
+		this.socket.onerror = this.onClose.bind(this);
+		this.socket.onclose = this.onClose.bind(this);
+		return this;
+	};
+
+	WSClient.prototype.onClose = function(ev) {
+		clearTimeout(this.reconnectTimeoutId);
+		this.reconnectTimeoutId = setTimeout(function(){
+			this.start();	
+		}.bind(this), this.interval);
+	};
+
+	WSClient.prototype.send = function(data) {
+		this.socket.send(data);
+	};
+
+	return new WSClient().start();
+}
+
+
+function getResponse( onReady, onRecv )
+{
+	return  wsClient( getUrl(), 500, function(event) {
+		if (event === null) {
+			onReady();
+			return;
+		}
+		if (typeof event.data !== 'string') {
+			return;
+		}
+
+		let res = null;
+		try {
+			res = JSON.parse(event.data);
+		} catch (e) {}
+
+		if (res === null || res.cmd !== "report") {
+			return;
+		}
+
+		onRecv( res );
+	});
+}
+
+
+function onReady() 
+{
+	client.send(JSON.stringify({
+		userId: 'iamcontroleruserid',
+		to: 'center',
+		handler: 'manager',
+		cmd:  'report'
+	}));
+}
+
+function onRecv(res) {
+	console.log(res);
+	$("#reporttime").text((new Date(res.edgeNodes[0].timestamp).toLocaleString()));
+	var key = ["wsClientCount", "mjpegActiveCount", "mjpegClientCount", "mpeg1ActiveCount", "mpeg1ClientCount"];
+	for(idx in key) {
+		$("#"+key[idx]).text(res.edgeNodes[0][key[idx]])
+	}
+}
+var client = getResponse(onReady, onRecv);
+
+	</script>
+</body>
+</html>
+
