@@ -66,7 +66,7 @@ module.exports = class WebCameraSource
 			// internal call must wait for webcamera
 			if ((cmdObj = this.getCmdObj()) === null) {
 				console.log( `Not found webcam, start again after ${this.onvifInterval} ms` );
-				!this.advBox.active && this.advBox.start();
+				! this.advBox.active && this.advBox.start();
 
 				setTimeout(()=> {
 					this.waitAvailableWebcam( null, callback );

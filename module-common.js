@@ -132,9 +132,12 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 	start( callback ) 
 	{
 		callback = callback || this.onFFmpegStart.bind(this);
+		let inputOptions = this.config.inputOptions? this.config.inputOptions : [];
+
 		this.command = ffmpeg()
 			.input( this.mp4File )
 			.native()
+			.inputOptions( inputOptions )
 			.output( this.output )
 			.outputOptions([ '-f mjpeg', '-c:v mjpeg' ])
 			.videoFilters( this.config.filter )
@@ -165,8 +168,11 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 	start (callback) 
 	{
 		callback = callback || this.onFFmpegStart.bind(this);
+		let inputOptions = this.config.inputOptions? this.config.inputOptions : [];
+
 		this.command = ffmpeg()
 			.input(this.url)
+			.inputOptions( inputOptions )
 			.output(this.output)
 			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
 			.videoFilters( this.config.filter )
@@ -197,9 +203,15 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 	start( callback ) 
 	{
 		callback = callback || this.onFFmpegStart.bind(this);
+	
+		let inputOptions = this.config.inputOptions? this.config.inputOptions : ['-f v4l2'];
+		if (inputOptions.indexOf('-f v4l2') === -1) {
+			inputOptions.push( '-f v4l2' );
+		}
+
 		this.command = ffmpeg()
 			.input(this.devPath)
-			.inputOptions( ['-f v4l2'] )
+			.inputOptions( inputOptions )
 			.output(this.output)
 			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
 			.videoFilters( this.config.filter )

@@ -1,3 +1,5 @@
+### Fix bugs (2018-02-7)
+* fix bug of mjpeg stream in relayNode, previous will stop after switchVideoMode 
 
 ### add support (2018-02-5)
 * in centerNode config add "allowSources" array, only load the Specified sources

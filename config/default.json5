@@ -3,6 +3,7 @@
 		usbCamera: {
 			caption: 'Local usb camera',
 			forceStart: true, // if true, when a camera plugin, it would be autoplay
+			// inputOptions: [],
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 			src: [ '/dev/video0', '/dev/video1' ]
@@ -10,6 +11,7 @@
 
 		webCamera: {
 			caption: 'Video from webcamera',
+			inputOptions: ['-timeout 2800'],
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 
@@ -37,6 +39,7 @@
 
 		localMp4: {
 			caption: 'Local mp4 playlist',
+			// inputOptions: [],
 			filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 			loop: 'yes',  // yes, no
@@ -67,9 +70,9 @@
 	},{
 		active: true,
 		port: 8081,
-		allowSources: ['localMp4'],
-		defaultSource: 'localMp4',
-		defaultSourceIndex: 1,
+		allowSources: ['usbCamera', 'localMp4'],
+		defaultSource: 'usbCamera',
+		defaultSourceIndex: 0,
 		mpeg1Qscale: 12,
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,

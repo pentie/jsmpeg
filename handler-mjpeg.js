@@ -5,10 +5,11 @@ module.exports = class MJpegHandler
 	{
 		this.handlerName = 'mjpeg';
 		this.nodeId = env.get('nodeId');
+		this.isCenter = env.get('isCenter');
 		this.config = env.get('getConfig')();
 		this.cache = env.get('newCache')();
 		this.eachClient = env.get('eachClient');
-		this.feed_list = new Array();
+		this.feedList = new Array();
 		this.upstreamLastTime = Date.now();
 
 		this.mjpegName = this.config.mjpegStreamName? this.config.mjpegStreamName : 'seed.mjpeg';
@@ -31,6 +32,10 @@ module.exports = class MJpegHandler
 
 	feedMjpegStream( jpeg ) 
 	{
+		if (this.mjpegAudience.length === 0) {
+			return;
+		}
+
 		let content = Buffer(jpeg);
 		let head =  '--' + this.mjpegBoundary + "\r\n" +
 			"Content-Type: image/jpeg\r\n" + 
@@ -95,9 +100,9 @@ module.exports = class MJpegHandler
 	{
 		this.downstream( chunk, client.downClients );
 
-		setTimeout(function(){
-			this.requestNextJpeg( client, 'interval');
-		}.bind(this), this.interval);
+		setTimeout( (param)=>{
+			this.requestNextJpeg( param, 'interval');
+		}, this.interval, client);
 	}
 
 	feed (chunk) 
@@ -109,21 +114,19 @@ module.exports = class MJpegHandler
 	{
 		this.feedMjpegStream( chunk );
 
-		let feedList = this.feed_list;
-
-		if (feedList.length === 0) {
+		if (this.feedList.length === 0) {
 			return;
 		}
 
-		this.eachClient( function( client ) {
-			let index = feedList.indexOf( client );
+		this.eachClient(( socket ) => {
+			let index = this.feedList.indexOf( socket.uuid );
+
 			if (index !== -1) {
-				client.send( chunk );
-				delete feedList[index];
+				// ! this.isCenter && console.log(chunk);
+				socket.send( chunk );
+				delete this.feedList[index];
 			}
 		}, downClients );
-
-		feedList.length = 0;
 	}
 
 	onDownRequest (socket, req) 
@@ -133,9 +136,12 @@ module.exports = class MJpegHandler
 
 		 switch (req.cmd) {
 		 	case 'active':
-				console.log(req);
 			case 'interval':
-				this.feed_list.push(socket);
+				// ! this.isCenter && console.log(req);
+
+				if ( this.feedList.indexOf( socket.uuid ) === -1 ) {
+					this.feedList.push(socket.uuid);
+				}
 				break;
 
 			default:

@@ -73,6 +73,8 @@ module.exports = class WebSocketHub
 		this.socketServer.connectionCount = 0;
 
 		this.socketServer.on('connection', (function(socket, upgradeReq) {
+			socket.uuid = uuidv1();
+
 			this.socketServer.connectionCount++;
 			console.log('New ImageFeed Connection: ' + this.socketServer.connectionCount+' total)');
 
@@ -107,8 +109,6 @@ module.exports = class WebSocketHub
 					handler.onDownConnect( socket );
 				}
 			});
-
-			socket.uuid = uuidv1();
 		}).bind(this));
 
 		this.webServer.listen(port, ()=> {
@@ -454,14 +454,23 @@ module.exports = class WebSocketHub
 				console.log( 'get defaultUpstream error when name=default' );
 				return false;
 			}
+			console.log('specify upstream as: ', name);
 		}
 
 		if( socket.upstreamName === name ) {
+			console.log("same upstream, needn\'t to change : ", socket.upstreamName);
 			return false;
 		}
 
-		if ( !this.upstreamClients.hasOwnProperty( name )) {
+		if ( ! this.upstreamClients.hasOwnProperty( name )) {
+			console.log('not found the upstgream: ', name, this.upstreamClients.keys() );
 			return null;
+		}
+
+		let targetClients = this.upstreamClients[name].downClients;
+		if ( targetClients.indexOf( socket ) >= 0 ) {
+			console.log( 'target upstream client have already owned ths socket' );
+			return false;
 		}
 
 		if ( socket.upstreamName ) {
@@ -469,14 +478,13 @@ module.exports = class WebSocketHub
 				let oldDownClients = this.upstreamClients[socket.upstreamName].downClients;
 				let indexExists = oldDownClients.indexOf( socket );
 				if ( indexExists >= 0 ) {
+					console.log( 'splice socket from: ', socket.upstreamName);
 					oldDownClients.splice( indexExists, 1 );
 				}
 			}
 		}
 
-		let targetClients = this.upstreamClients[name].downClients;
 		targetClients.push( socket );
-
 		socket.upstreamName = name;
 		return true;
 	}
@@ -584,8 +592,7 @@ module.exports = class WebSocketHub
 					return;
 				}
 
-				var dataView = new DataView(data);
-				if ( dataView.getUint16(0) === 0xFFD8 ) {
+				if ( data.readUInt16BE() === 0xFFD8 ) {
 					sendToHandlers( 'mjpeg', data, client );
 					return;
 				}
@@ -621,7 +628,7 @@ module.exports = class WebSocketHub
 				perMessageDeflate: false
 			});
 
-			this.socket.binaryType = 'arraybuffer';
+			this.socket.binaryType = 'nodebuffer';
 
 			this.socket.on('message', function incoming(data) {
 				this.recv(data);

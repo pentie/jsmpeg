@@ -30,7 +30,7 @@ module.exports = class UsbCameraSource
 
 		if (this.config.autoStart === true) {
 			this.start(null, (cmdline)=>{
-				console.log('first: ', cmdline);
+				console.log('autoStart: ', cmdline);
 			});
 		}
 
@@ -58,27 +58,22 @@ module.exports = class UsbCameraSource
 				return;
 			}
 
-			if (this.exceptionShutdown) {
+			if ( this.exceptionShutdown ) {
 				this.exceptionShutdown = false;
 				break;
 			}
 
-			if (this.active) {
+			if ( this.active ) {
 				break;
 			}
 
 			return;
 		} while( false );
 
-		let comdObj = {
-			devPath: devPath,
-			sourceName: this.sourceName
-		};
-		
 		this.stop();
 
-		this.start( comdObj, (cmdline) => {
-			console.log('usb insert, playing: ', comdObj.devPath );
+		this.start( {devPath: devPath}, (cmdline) => {
+			console.log('usb insert, playing: ', devPath );
 		});
 	}
 
