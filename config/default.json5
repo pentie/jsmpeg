@@ -97,6 +97,8 @@
 		// setgid: 1000,
 		// setuid: 1000,
 
+		// sometimes need not run all sources
+		// suggest only the minimized need
 		allowSources: ['webCamera', 'usbCamera', 'localMp4'],
 
 		// when centerNode init, only one source will be run
@@ -137,7 +139,7 @@
 		// this will retry in 3000 seconds as default
 		retryMs: 3000,
 
-		// only one input item would be set to "true"
+		// only one input item should be set to "true"
 		// the inputs below are audio inputs, will merged with main video
 		inputs: [{
 			active: false,
@@ -150,7 +152,7 @@
 			inputFrom: 'hw:0',
 		    },{
 			active: false,
-			name: 'local mic',
+			name: 'local pulse mic',
 			options: [
 				'-f pulse', 
 				'-ar 8000',
