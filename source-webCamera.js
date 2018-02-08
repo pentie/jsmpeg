@@ -151,6 +151,10 @@ module.exports = class WebCameraSource
 					
 					this.source && this.source.stop();
 					this.active && this.waitWebcamBackAgain( mjpgUrl );
+				},
+				(err, stdout, stderr) => {
+					console.debug(stdout);
+					console.debug(stderr);
 				});
 
 				this.source.start( (cmdline )=>{
@@ -340,7 +344,7 @@ module.exports = class WebCameraSource
 	onvifScan( callback )
 	{
 		onvif.startProbe().then(( devInfoList ) => {
-console.log(devInfoList);
+// console.log(devInfoList);
 			devInfoList.forEach(( devInfo ) => {
 
 				let device = new onvif.OnvifDevice({

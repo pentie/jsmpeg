@@ -121,12 +121,7 @@ function getResponse( onReady, onRecv )
 
 function onReady() 
 {
-	client.send(JSON.stringify({
-		userId: 'iamcontroleruserid',
-		to: 'center',
-		handler: 'manager',
-		cmd:  'report'
-	}));
+	return;
 }
 
 function onRecv(res) {

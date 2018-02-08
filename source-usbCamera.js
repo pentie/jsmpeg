@@ -163,6 +163,10 @@ module.exports = class UsbCameraSource
 				}
 
 				this.active && !this.advBox.active && this.advBox.start();
+			},
+			(err, stdout, stderr) => {
+				console.debug(stdout);
+				console.debug(stderr);
 			});
 
 			this.source.start( (cmdline )=>{

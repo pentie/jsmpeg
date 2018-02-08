@@ -1,5 +1,6 @@
 
 const express = require('express');
+const compression = require('compression');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const http = require('http');
@@ -59,6 +60,7 @@ module.exports = class WebSocketHub
 	startServer( port, done )
 	{
 		let app = express();
+		app.use(compression());
 		app.use(express.static('public'));
 		app.use(cookieParser());
 		app.use(bodyParser.json());
