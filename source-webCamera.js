@@ -340,7 +340,7 @@ module.exports = class WebCameraSource
 	onvifScan( callback )
 	{
 		onvif.startProbe().then(( devInfoList ) => {
-console.log(devInfoList);
+// console.log(devInfoList);
 			devInfoList.forEach(( devInfo ) => {
 
 				let device = new onvif.OnvifDevice({
