@@ -157,12 +157,12 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 
 class JpegsFromWebCamera extends JpegsFromFFmpegBase
 {
-	constructor( config, url, jpegsCallback, endCallback ) 
+	constructor( config, url, jpegsCallback, endCallback, errCallback ) 
 	{
 		super(config, jpegsCallback);
 		this.url = url;
 		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
-		this.errCallback = endCallback || this.onError.bind(this) ;
+		this.errCallback = errCallback || this.onError.bind(this) ;
 	}
 
 	start (callback) 
@@ -191,13 +191,13 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 
 class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 {
-	constructor( config, devPath, jpegsCallback, endCallback ) 
+	constructor( config, devPath, jpegsCallback, endCallback, errCallback ) 
 	{
 		super( config, jpegsCallback );
 		this.devPath = devPath;
 		this.command = null;
 		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
-		this.errCallback = endCallback || this.onError.bind(this) ;
+		this.errCallback = errCallback || this.onError.bind(this) ;
 	}
 
 	start( callback ) 
@@ -282,6 +282,12 @@ class JpegsToLiveRtmp
 		this.input.write(chunk);	
 	}
 
+	onError( error, stdout, stderr ) 
+	{
+		console.debug(stdout);
+		console.debug(stderr);
+	}
+
 	onEnd( error ) 
 	{
 		this.endCallback( error );
@@ -323,7 +329,7 @@ class JpegsToLiveRtmp
 		});
 
 		this.command.on('start', startCallback )
-		this.command.on('error', this.onEnd.bind(this) );
+		this.command.on('error', this.onError.bind(this) );
 		this.command.on('end', this.onEnd.bind(this) );
 		this.command.run();
 		return this;
