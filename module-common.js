@@ -284,8 +284,8 @@ class JpegsToLiveRtmp
 
 	onError( error, stdout, stderr ) 
 	{
-		console.debug(stdout);
-		console.debug(stderr);
+		console.log(stdout);
+		console.log(stderr);
 	}
 
 	onEnd( error ) 
@@ -340,11 +340,82 @@ class JpegsToLiveRtmp
 	}
 }
 
+class LocalToLiveRtmp
+{
+	constructor( config, endCallback ) 
+	{
+		this.config = config;
+		// this.input = new PassThroughStream();
+		// this.input.on('error', endCallback);
+		this.endCallback = endCallback;
+	}
+
+	write( chunk ) { return; }
+
+	onError( error, stdout, stderr ) 
+	{
+		console.log(stdout);
+		console.log(stderr);
+	}
+
+	onEnd( error ) 
+	{
+		this.endCallback( error );
+	}
+
+	onStart( cmdline ) 
+	{
+		console.log( this.constructor.name, cmdline);
+	}
+
+	start( startCallback ) 
+	{
+		startCallback = startCallback || this.onStart.bind(this); 
+
+		this.command = ffmpeg();
+		// this.command.input(this.input);
+		// this.command.inputFormat('mjpeg');
+
+		this.config.inputs.forEach( (config) => {
+			if (config.active !== undefined) {
+				if (config.active !== true) {
+					return;
+				}
+			}
+
+			this.command.input( config.inputFrom );
+			this.command.inputOptions( config.options );
+		});
+
+		this.config.outputs.forEach( (config) => {
+			if (config.active !== undefined) {
+				if (config.active !== true) {
+					return;
+				}
+			}
+
+			this.command.output( config.outputTo );
+			this.command.outputOptions( config.options );
+		});
+
+		this.command.on('start', startCallback )
+		this.command.on('error', this.onError.bind(this) );
+		this.command.on('end', this.onEnd.bind(this) );
+		this.command.run();
+		return this;
+	}
+
+	stop() {
+		this.command && this.command.kill('SIGKILL');
+	}
+}
+
 module.exports = {
 	writeBinFile,
 	JpegsFromWebCamera,
 	JpegsFromUsbCamera,
 	JpegsFromMp4File,
 	Mpeg1tsFromJpegs,
-	JpegsToLiveRtmp
+	JpegsToLiveRtmp,
+	LocalToLiveRtmp
 };

@@ -1,5 +1,5 @@
 
-const {JpegsToLiveRtmp} = require('./module-common.js');
+const {JpegsToLiveRtmp, LocalToLiveRtmp} = require('./module-common.js');
 const tcpPortUsed = require('tcp-port-used');
 
 module.exports = class LiveStreamHandler 
@@ -41,16 +41,24 @@ module.exports = class LiveStreamHandler
 
 	streamDelay( delayMs )
 	{
-		if (delayMs === undefined) {
-			setImmediate( () => {
-				this.chunker = new JpegsToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
-				this.chunker.start( this.onStreamStart.bind(this) );
-			});
+		if(this.config.defaultSource === "localMp4") {
+
+			this.chunker = new LocalToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
+			this.chunker.start( console.log );
+
 		} else {
-			setTimeout( () => {
-				this.chunker = new JpegsToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
-				this.chunker.start( this.onStreamStart.bind(this) );
-			}, delayMs );
+
+			if (delayMs === undefined) {
+				setImmediate( () => {
+					this.chunker = new JpegsToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
+					this.chunker.start( this.onStreamStart.bind(this) );
+				});
+			} else {
+				setTimeout( () => {
+					this.chunker = new JpegsToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
+					this.chunker.start( this.onStreamStart.bind(this) );
+				}, delayMs );
+			}
 		}
 	}
 
