@@ -42,10 +42,10 @@ module.exports = class LiveStreamHandler
 	streamDelay( delayMs )
 	{
 		if(this.config.defaultSource === "localMp4") {
-
-			this.chunker = new LocalToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
-			this.chunker.start(this.onStreamStart.bind(this) );
-
+			setImmediate( () => {
+				this.chunker = new LocalToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
+				this.chunker.start(this.onStreamStart.bind(this) );
+			})
 		} else {
 
 			if (delayMs === undefined) {
