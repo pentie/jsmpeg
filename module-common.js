@@ -1,4 +1,3 @@
-
 const { exec } = require('child_process');
 const ffmpeg = require('fluent-ffmpeg');
 const PassThroughStream = require('stream').PassThrough;
@@ -340,11 +339,72 @@ class JpegsToLiveRtmp
 	}
 }
 
+class LocalToLiveRtmp
+{
+	constructor( config, inputObj, endCallback ) 
+	{
+		this.config = config;
+		this.endCallback = endCallback;
+		this.input = inputObj.src;
+		this.inputOptions = inputObj.options;
+	}
+
+	onError( error, stdout, stderr ) 
+	{
+		console.log(stdout);
+		console.log(stderr);
+		this.endCallback(error);
+	}
+
+	onEnd( error ) 
+	{
+		this.endCallback( error );
+	}
+
+	onStart( cmdline ) 
+	{
+		console.log( this.constructor.name, cmdline);
+	}
+
+	start( startCallback ) 
+	{
+
+		startCallback = startCallback || this.onStart.bind(this); 
+
+		this.command = ffmpeg();
+
+		this.command.input( this.input );
+		this.command.inputOptions( this.inputOptions );
+
+		this.config.outputs.forEach( (config) => {
+			if (config.active !== undefined) {
+				if (config.active !== true) {
+					return;
+				}
+			}
+
+			this.command.output( config.outputTo );
+			this.command.outputOptions( config.options );
+		});
+
+		this.command.on('start', startCallback )
+		this.command.on('error', this.onError.bind(this) );
+		this.command.on('end', this.onEnd.bind(this) );
+		this.command.run();
+		return this;
+	}
+
+	stop() {
+		this.command && this.command.kill('SIGKILL');
+	}
+}
+
 module.exports = {
 	writeBinFile,
 	JpegsFromWebCamera,
 	JpegsFromUsbCamera,
 	JpegsFromMp4File,
 	Mpeg1tsFromJpegs,
-	JpegsToLiveRtmp
+	JpegsToLiveRtmp,
+	LocalToLiveRtmp
 };
