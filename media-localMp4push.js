@@ -98,7 +98,12 @@ class LocalMp4Source
 		} while(false);
 
 		console.log('playing: ', mp4File);
-		this.source = new LocalToLiveRtmp( this.livestreamConfig, mp4File, ()=>{
+		this.source = new LocalToLiveRtmp( this.livestreamConfig,
+			{
+				src: mp4File,
+				options: ['-re']
+			},
+			()=>{
 			console.log("live retryMs: "+this.livestreamConfig.retryMs);
 			setTimeout( ()=>{
 				cmdObj.internalCall = true;

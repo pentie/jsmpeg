@@ -341,11 +341,12 @@ class JpegsToLiveRtmp
 
 class LocalToLiveRtmp
 {
-	constructor( config, mp4File, endCallback ) 
+	constructor( config, inputObj, endCallback ) 
 	{
 		this.config = config;
 		this.endCallback = endCallback;
-		this.input = mp4File;
+		this.input = inputObj.src;
+		this.inputOptions = inputObj.options;
 	}
 
 	onError( error, stdout, stderr ) 
@@ -373,7 +374,7 @@ class LocalToLiveRtmp
 		this.command = ffmpeg();
 
 		this.command.input( this.input );
-		this.command.inputOptions( this.config.options );
+		this.command.inputOptions( this.inputOptions );
 
 		this.config.outputs.forEach( (config) => {
 			if (config.active !== undefined) {

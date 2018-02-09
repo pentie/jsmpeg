@@ -174,7 +174,7 @@
 			name: 'tencent video stream cloud',
 			options: [
 				'-f flv',
-				'-s 320x240',
+				'-s 640x360',
 				'-r 10',
 				'-pix_fmt yuv420p',
 				'-b:v 256k',
