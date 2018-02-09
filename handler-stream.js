@@ -44,7 +44,7 @@ module.exports = class LiveStreamHandler
 		if(this.config.defaultSource === "localMp4") {
 
 			this.chunker = new LocalToLiveRtmp( this.livestream, this.onStreamEnd.bind(this) );
-			this.chunker.start( console.log );
+			this.chunker.start(this.onStreamStart.bind(this) );
 
 		} else {
 

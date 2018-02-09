@@ -356,6 +356,7 @@ class LocalToLiveRtmp
 	{
 		console.log(stdout);
 		console.log(stderr);
+		this.endCallback( error );
 	}
 
 	onEnd( error ) 
