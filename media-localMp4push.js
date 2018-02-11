@@ -101,7 +101,14 @@ class LocalMp4Source
 		this.source = new LocalToLiveRtmp( this.livestreamConfig,
 			{
 				src: mp4File,
-				options: ['-re']
+				options: [
+					"-threads 2",
+					"-re",
+					"-fflags",
+					"+genpts",
+					"-stream_loop -1"
+				]
+				// TODO: note: infinitly loop one source
 			},
 			()=>{
 			console.log("live retryMs: "+this.livestreamConfig.retryMs);
