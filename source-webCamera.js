@@ -135,27 +135,36 @@ module.exports = class WebCameraSource
 			}
 
 			this.waitAvailableWebcam( cmdObj, (mjpgUrl)=> {
-				this.source = new JpegsFromWebCamera( this.config, mjpgUrl, this.feedProxy.bind(this), (err)=>{
-					this.isRunning = false;
-					if (err) {
-						let errStr = err.toString();
-						if (errStr.indexOf('Connection refused') >= 0) {
-							console.log('ffmpeg lost the camera');
-						}else 
-						if (errStr.indexOf('SIGKILL') >= 0) {
-							console.log('ffmpeg was killed');
-						} else {
-							console.log( err );
+				this.source = new JpegsFromWebCamera( this.config, mjpgUrl,
+					this.feedProxy.bind(this),
+					//endCallback
+					(stdout, stderr)=>{
+						this.isRunning = false;
+						this.source && this.source.stop();
+						this.active && this.waitWebcamBackAgain( mjpgUrl );
+						console.debug(stdout);
+						console.debug(stderr);
+					},
+					//errCallback
+					(err, stdout, stderr) => {
+						this.isRunning = false;
+						this.source && this.source.stop();
+						this.active && this.waitWebcamBackAgain( mjpgUrl );
+
+						console.debug(stdout);
+						console.debug(stderr);
+						if (err) {
+							let errStr = err.toString();
+							if (errStr.indexOf('Connection refused') >= 0) {
+								console.log('ffmpeg lost the camera');
+							}else 
+							if (errStr.indexOf('SIGKILL') >= 0) {
+								console.log('ffmpeg was killed');
+							} else {
+								console.log( err );
+							}
 						}
-					}
-					
-					this.source && this.source.stop();
-					this.active && this.waitWebcamBackAgain( mjpgUrl );
-				},
-				(err, stdout, stderr) => {
-					console.debug(stdout);
-					console.debug(stderr);
-				});
+					});
 
 				this.source.start( (cmdline )=>{
 					this.isRunning = true;
