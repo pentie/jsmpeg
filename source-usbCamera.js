@@ -147,27 +147,34 @@ module.exports = class UsbCameraSource
 				console.log( 'Wait '+ useTimeMs + ' ms to start');
 			}
 
-			this.source = new JpegsFromUsbCamera( this.config, cmdObj.devPath, this.feedProxy.bind(this), (err)=>{
-				this.isRunning = false;
-				
-				if (err) {
-					let errStr = err.toString();
-					if (errStr.indexOf('SIGKILL') >= 0) {
-						console.log('ffmpeg was killed');
-					} else
-					if (errStr.indexOf('No such file or directory') >= 0) {
-						console.log('ffmpeg not found: ' + cmdObj.devPath);
-					} else {
-						console.log( err );
-					}
-				}
+			this.source = new JpegsFromUsbCamera( this.config, cmdObj.devPath,
+				this.feedProxy.bind(this),
 
-				this.active && !this.advBox.active && this.advBox.start();
-			},
-			(err, stdout, stderr) => {
-				console.debug(stdout);
-				console.debug(stderr);
-			});
+				//endCallback
+				(stdout, stderr)=>{
+					console.debug(stdout);
+					console.debug(stderr);
+					this.isRunning = false;
+					this.active && !this.advBox.active && this.advBox.start();
+				},
+				//errCallback
+				(err, stdout, stderr) => {
+					console.debug(stdout);
+					console.debug(stderr);
+					this.isRunning = false;
+					this.active && !this.advBox.active && this.advBox.start();
+					if (err) {
+						let errStr = err.toString();
+						if (errStr.indexOf('SIGKILL') >= 0) {
+							console.log('ffmpeg was killed');
+						} else
+						if (errStr.indexOf('No such file or directory') >= 0) {
+							console.log('ffmpeg not found: ' + cmdObj.devPath);
+						} else {
+							console.log( err );
+						}
+					}
+				});
 
 			this.source.start( (cmdline )=>{
 				this.isRunning = true;
