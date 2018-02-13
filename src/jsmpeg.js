@@ -8,10 +8,12 @@ var JSMpeg =
 		echoResponseTimeout: 3000,
 		reconnectInterval: 3000,
 		mjpegFrameInterval: 1000,
-		mjpegTimeQueLength: 50,
-		mpeg1TimeQueLength: 50,
-		echoTimeQueLength: 50,
+		mjpegTimeQueLength: 20,
+		mpeg1TimeQueLength: 20,
+		echoTimeQueLength: 20,
 		defaultSourceIndex: 0,
+		downgradeThreadhold: 3000,
+		autoDowngrade: false,
 		enableLog: true
 	},
 
@@ -243,10 +245,16 @@ var JSMpeg =
 		timeQue.unshift(interval_time);
 		if (timeQue.length > this.config.mpeg1TimeQueLength) {
 			timeQue.pop();
+
+			if(this.config.autoDowngrade) {
+				var valMax = Math.max.apply(null, timeQue)
+				if ( valMax > this.config.downgradeThreadhold) {
+					this.switchVideoMode('mjpeg');
+				}
+			}
 		}
 
 		source.send(JSON.stringify(payload));
-		//this.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
 	},
 
 	on_mjpeg_rendered: function (source, renderTime) 

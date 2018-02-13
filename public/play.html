@@ -1,0 +1,100 @@
+<!DOCTYPE html> <html><head> <title>视频现场直播</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="http://cdnjs.cat.net/ajax/libs/twitter-bootstrap/4.0.0/css/bootstrap.css">
+	<style type="text/css">
+	.container-full-width { padding: 0; }
+	.btn_clicked { background-color: #5cb85c!important; border-color: #5cb85c!important;}
+	</style>
+	
+	<script type="text/javascript" src="http://cdnjs.cat.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+	<script type="text/javascript">
+var intwsurl = "";
+	</script>
+
+	<script type="text/javascript">
+	jQuery.cachedScript = function( url, options ) {
+		options = $.extend( options || {}, { dataType: "script", cache: true, url: url });
+		return jQuery.ajax( options );
+	};
+	(function(){
+
+		// var orig_title = document.title;
+		function setInfo(text) { document.title = text; }
+
+		if(intwsurl === "") {
+			var urlobj = new URL(document.location.href);
+			urlobj.protocol = "ws";
+			urlobj.pathname = '/';
+			intwsurl = urlobj.href
+		}
+
+		var inthost = new URL(intwsurl);
+		var xhr = new XMLHttpRequest();
+		inthost.protocol = 'http';
+		inthost.pathname = '/';
+		var intbase = inthost.href;
+		$.ajax({
+			"url": intbase + 'manager/echo',
+			"timeout": 2000,
+		})
+		.fail(function(xhr, text, error) {
+			alert("intwsurl无法链接")
+		})
+		.done(function(d) {
+			setInfo("内网直播链接中...");
+			$.cachedScript(intbase + 'jsmpeg.js')
+			.done(function() {
+					JSMpeg.config.autoplay = false;
+					JSMpeg.config.echoConnTimeout = 2000;
+					JSMpeg.config.reconnectInterval = 3000;
+					JSMpeg.config.mjpegFrameInterval = 200;
+					JSMpeg.config.autoDowngrade = true;
+					// JSMpeg.infos.mode = 'mjpeg';
+
+					var upstreams_len = 0;
+					JSMpeg.onHeartbeatReport = function( reports ) {
+						// this.log('Report:', reports);
+						if(this.infos.upstreams.length != upstreams_len ) {
+							upstreams_len = this.infos.upstreams.length;
+							$("#channel_ctl").empty();
+							$.each(this.infos.upstreams, function(_,stm) {
+								var btn = $("<button>").addClass("btn btn-info")
+								.text(stm.caption)
+								.attr('data-stmname', stm.name)
+								.appendTo("#channel_ctl");
+								if(stm.active) { btn.addClass("btn_clicked") }
+							});
+						}
+					};
+
+					$().ready(function(){
+						JSMpeg.CreateSingleVideo(document.querySelector("#jsmpeg"), intwsurl, "1280x720");
+						// JSMpeg.CreateVideoElements();
+						$("#channel_ctl").on("click", "button", function (evn) {
+							$("#channel_ctl > button.btn_clicked").removeClass("btn_clicked");
+							$(evn.target).addClass("btn_clicked");
+							var name = $(evn.target).data('stmname');
+							JSMpeg.switchUpstream(name);
+						});
+					});
+				}
+			);
+		})
+	})();
+
+	</script>
+</head>
+<body class="bg-dark">
+	<div class="container-full-width container-fluid">
+		<div id="jsmpeg" class="jsmpeg" 
+			data-poster="http://vodplayerinfo-10005041.file.myqcloud.com/3035579109/vod_paster_pause/paster_pause1469013308.jpg"
+			data-autoplay="false"
+			data-url=""
+			data-start="mpeg1"
+			data-disable-gl="false"></div>
+		<div id="channel_ctl" class="d-flex justify-content-around"></div>
+	</div>
+</body>
+</html>

@@ -31,7 +31,7 @@ gulp.task('default', function() {
     .pipe(concat('jsmpeg.js'))
     .pipe(gulp.dest('public'))
     // This will minify and rename to foo.min.js",
-    .pipe(uglify())
+    .pipe(uglify({compress: {hoist_funs: false}}))
     // .pipe(insert.prepend('/*! build time: ' + (new Date()).toLocaleString() + ' */\n'))
     .pipe(rename({ extname: '.min.js' }))
     .pipe(sourcemaps.write('./'))
