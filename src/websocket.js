@@ -124,6 +124,17 @@ WSSource.prototype.jsonPost = function( url, data, callback, timeout ) {
 
 };
 
+WSSource.prototype.send_cmd_active = function (param) {
+	if(this.established) {
+		this.send(JSON.stringify({
+			handler: JSMpeg.infos.videoMode,
+			userId: JSMpeg.userid(),
+			cmd: 'active',
+			param: param
+		}));
+	}
+};
+
 return WSSource;
 
 })();

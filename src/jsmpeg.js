@@ -112,13 +112,6 @@ var JSMpeg =
 			this.log( 'no source found');
 		}
 
-		var req = {
-			handler: 'manager',
-			userId: this.userid(),
-			cmd: 'active',
-			param: true
-		};
-
 		source.send(JSON.stringify({
 			handler: 'manager',
 			userId: this.userid(),
@@ -213,12 +206,9 @@ var JSMpeg =
 		infos.mjpegTime.length = 0;
 		infos.mpeg1Time.length = 0;
 
-		source.send(JSON.stringify({
-			handler: infos.videoMode,
-			userId: this.userid(),
-			cmd: 'active',
-			param: true
-		}));
+		if(this.VideoElement.player.options.autoplay) {
+			source.send_cmd_active(true);
+		}
 
 		this.onSourceConnected( source );
 	},
@@ -332,10 +322,11 @@ var JSMpeg =
 			}
 		}
 		elm.dataset.url = url;
-		var video_obj = new JSMpeg.VideoElement(elm, res);
-		window.video_objs = [ video_obj ];
+		this.VideoElement = new JSMpeg.VideoElement(elm, res);
+		window.video_objs = [ this.VideoElement ];
 	},
 
+	/*
 	CreateVideoElements: function() {
 		window.video_objs = [];
 		var elements = document.querySelectorAll('.jsmpeg');
@@ -357,6 +348,7 @@ var JSMpeg =
 			window.video_objs.push(video_obj);
 		}
 	},
+	*/
 
 	Now: function() {
 		return window.performance 

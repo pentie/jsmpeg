@@ -65,25 +65,28 @@ var VideoElement = function(element, res) {
 	element.playerInstance = this.player;
 
 	// Setup the poster element, if any
-	if (options.poster && !options.autoplay && !this.player.options.streaming) {
+	//if (options.poster && !options.autoplay && !this.player.options.streaming) {
+	//streaming is now pausable
+	if (options.poster && !options.autoplay) {
 		options.decodeFirstFrame = false;
 		this.poster = new Image();
 		this.poster.src = options.poster;
 		this.poster.addEventListener('load', this.posterLoaded)
 		addStyles(this.poster, {
 			display: 'block', zIndex: 1, position: 'absolute',
+			width: '100%', height: '100%',
 			top: 0, left: 0, bottom: 0, right: 0
 		});
 		this.container.appendChild(this.poster);
 	}
 
 	// Add the click handler if this video is pausable
-	if (!this.player.options.streaming) {
-		this.container.addEventListener('click', this.onClick.bind(this));
-	}
+	// if (!this.player.options.streaming) { // }
+	this.container.addEventListener('click', this.onClick.bind(this));
 
 	// Hide the play button if this video immediately begins playing
-	if (options.autoplay || this.player.options.streaming) {
+	//if (options.autoplay || this.player.options.streaming) {
+	if (options.autoplay)  {
 		this.playButton.style.display = 'none';
 	}
 

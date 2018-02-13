@@ -11,7 +11,7 @@ JsonMsg.prototype.write = function(buffer) {
 	var reports = JSMpeg.infos.reports; 	
 
 	if (reports.cmd == 'switchUpstream') {
-		console.log(reports);
+		JSMpeg.log('switchUpstream', reports);
 		return;
 	}
 
