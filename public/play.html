@@ -22,7 +22,7 @@ var intwsurl = "";
 	};
 	(function(){
 
-		// var orig_title = document.title;
+		var orig_title = document.title;
 		function setInfo(text) { document.title = text; }
 
 		if(intwsurl === "") {
@@ -76,6 +76,7 @@ var intwsurl = "";
 						}
 					};
 
+					JSMpeg.onSourceConnected = function() { setInfo(orig_title); };
 					$().ready(function(){
 						JSMpeg.CreateSingleVideo(document.querySelector("#jsmpeg"), intwsurl, "1280x720");
 						// JSMpeg.CreateVideoElements();
@@ -102,7 +103,7 @@ var intwsurl = "";
 			data-start="mpeg1"
 			data-disable-gl="false"></div>
 		<div id="mode_indicator" class="position-absolute badge badge-success">V</div>
-		<div id="channel_ctl" class="d-flex justify-content-around"></div>
+		<div id="channel_ctl" class="mt-3 btn-group btn-group-lg"></div>
 	</div>
 </body>
 </html>
