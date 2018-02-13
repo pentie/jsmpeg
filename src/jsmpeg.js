@@ -12,7 +12,7 @@ var JSMpeg =
 		mpeg1TimeQueLength: 20,
 		echoTimeQueLength: 20,
 		defaultSourceIndex: 0,
-		downgradeThreadhold: 3000,
+		downgradeThresdhold: 3000,
 		autoDowngrade: false,
 		enableLog: true
 	},
@@ -121,6 +121,10 @@ var JSMpeg =
 			name: name
 		}));
 
+		if(!this.VideoElement.player.isPlaying) {
+			this.VideoElement.onClick();
+		}
+
 		return name;
 	},
 
@@ -161,6 +165,12 @@ var JSMpeg =
 
 			this.infos.videoMode = mode;
 		}.bind(this));
+	},
+
+	setDowngrade: function(thresdhole, callback) {
+		this.config.autoDowngrade = true;
+		this.config.downgradeThresdhold = thresdhole;
+		this.downgradeCallback = callback;
 	},
 
 	//======================================================//
@@ -248,8 +258,11 @@ var JSMpeg =
 
 			if(this.config.autoDowngrade) {
 				var valMax = Math.max.apply(null, timeQue)
-				if ( valMax > this.config.downgradeThreadhold) {
+				if ( valMax > this.config.downgradeThresdhold) {
 					this.switchVideoMode('mjpeg');
+					if(typeof this.downgradeCallback === 'function') {
+						this.downgradeCallback();
+					}
 				}
 			}
 		}
@@ -375,6 +388,7 @@ var JSMpeg =
 		}
 	},
 
+	/*
 	standardDeviation: function (values) {
 		var average = function (data) {
 			var sum = data.reduce(function (sum, value) { return sum + value; }, 0);
@@ -391,6 +405,7 @@ var JSMpeg =
 
 		return Math.ceil(Math.sqrt(avgSquareDiff));
 	},
+	*/
 
 
 };

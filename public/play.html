@@ -5,12 +5,14 @@
 	<style type="text/css">
 	.container-full-width { padding: 0; }
 	.btn_clicked { background-color: #5cb85c!important; border-color: #5cb85c!important;}
+	#mode_indicator { top: 1%; right: 2%; }
 	</style>
 	
 	<script type="text/javascript" src="http://cdnjs.cat.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
 	<script type="text/javascript">
-var intwsurl = "";
+//var intwsurl = "";
+var intwsurl = "ws://192.168.51.116:8090";
 	</script>
 
 	<script type="text/javascript">
@@ -46,12 +48,17 @@ var intwsurl = "";
 			setInfo("内网直播链接中...");
 			$.cachedScript(intbase + 'jsmpeg.js')
 			.done(function() {
-					JSMpeg.config.autoplay = false;
 					JSMpeg.config.echoConnTimeout = 2000;
 					JSMpeg.config.reconnectInterval = 3000;
 					JSMpeg.config.mjpegFrameInterval = 200;
-					JSMpeg.config.autoDowngrade = true;
 					// JSMpeg.infos.mode = 'mjpeg';
+
+					JSMpeg.setDowngrade(3000, function(){
+						$("#mode_indicator")
+						.removeClass("badge-success")
+						.addClass("badge-warning")
+						.text("M");
+					});
 
 					var upstreams_len = 0;
 					JSMpeg.onHeartbeatReport = function( reports ) {
@@ -94,6 +101,7 @@ var intwsurl = "";
 			data-url=""
 			data-start="mpeg1"
 			data-disable-gl="false"></div>
+		<div id="mode_indicator" class="position-absolute badge badge-success">V</div>
 		<div id="channel_ctl" class="d-flex justify-content-around"></div>
 	</div>
 </body>
