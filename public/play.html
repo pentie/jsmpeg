@@ -12,7 +12,6 @@
 
 	<script type="text/javascript">
 var intwsurl = "";
-// var intwsurl = "ws://192.168.51.116:8090";
 	</script>
 
 	<script type="text/javascript">
@@ -20,11 +19,20 @@ var intwsurl = "";
 		options = $.extend( options || {}, { dataType: "script", cache: true, url: url });
 		return jQuery.ajax( options );
 	};
+
+	function setInfo(text) { document.title = text; }
+
+	var orig_title = document.title;
+    var BomQuery = function(n){
+        var m = window.location.search.match(new RegExp( "(\\?|&)"+n+"=([^&]*)(&|$)"));
+        return !m ? "":decodeURIComponent(m[2]);
+    };
+
 	(function(){
-
-		var orig_title = document.title;
-		function setInfo(text) { document.title = text; }
-
+		if(intwsurl === "") {
+			intwsurl = BomQuery("ws");
+		}
+		
 		if(intwsurl === "") {
 			var urlobj = new URL(document.location.href);
 			urlobj.protocol = "ws";
@@ -33,7 +41,6 @@ var intwsurl = "";
 		}
 
 		var inthost = new URL(intwsurl);
-		var xhr = new XMLHttpRequest();
 		inthost.protocol = 'http';
 		inthost.pathname = '/';
 		var intbase = inthost.href;
@@ -51,46 +58,63 @@ var intwsurl = "";
 					JSMpeg.config.echoConnTimeout = 2000;
 					JSMpeg.config.reconnectInterval = 3000;
 					JSMpeg.config.mjpegFrameInterval = 200;
-					// JSMpeg.infos.mode = 'mjpeg';
-
-					JSMpeg.setDowngrade(3000, function(){
-						$("#mode_indicator")
-						.removeClass("badge-success")
-						.addClass("badge-warning")
-						.text("M");
+					JSMpeg.config.mjpegTimeQueLength= 5;
+					JSMpeg.config.mpeg1TimeQueLength= 5;
+					JSMpeg.setModeSwitch(3000, 60, function(mode){
+						$(document).trigger('jsmpeg_modeswitch', mode);
 					});
-
-					var upstreams_len = 0;
 					JSMpeg.onHeartbeatReport = function( reports ) {
-						// this.log('Report:', reports);
-						if(this.infos.upstreams.length != upstreams_len ) {
-							upstreams_len = this.infos.upstreams.length;
-							$("#channel_ctl").empty();
-							$.each(this.infos.upstreams, function(_,stm) {
-								var btn = $("<button>").addClass("btn btn-info")
-								.text(stm.caption)
-								.attr('data-stmname', stm.name)
-								.appendTo("#channel_ctl");
-								if(stm.active) { btn.addClass("btn_clicked") }
-							});
-						}
+						$(document).trigger('jsmpeg_reports', reports);
 					};
-
-					JSMpeg.onSourceConnected = function() { setInfo(orig_title); };
-					$().ready(function(){
-						JSMpeg.CreateSingleVideo(document.querySelector("#jsmpeg"), intwsurl, "1280x720");
-						// JSMpeg.CreateVideoElements();
-						$("#channel_ctl").on("click", "button", function (evn) {
-							$("#channel_ctl > button.btn_clicked").removeClass("btn_clicked");
-							$(evn.target).addClass("btn_clicked");
-							var name = $(evn.target).data('stmname');
-							JSMpeg.switchUpstream(name);
-						});
-					});
+					JSMpeg.onSourceConnected = function( source ) { 
+						$(document).trigger('jsmpeg_connected', source);
+					};
+					JSMpeg.CreateSingleVideo(document.querySelector("#jsmpeg"), intwsurl, "1280x720");
 				}
 			);
 		})
 	})();
+
+
+	$().ready(function() {
+		$("#channel_ctl").on("click", "button", function (evn) {
+			$("#channel_ctl > button.btn_clicked").removeClass("btn_clicked");
+			$(evn.target).addClass("btn_clicked");
+			var name = $(evn.target).data('stmname');
+			JSMpeg.switchUpstream(name);
+		});
+
+		$(document).on('jsmpeg_reports', function(evn, reports) {
+			var ctl = $("#channel_ctl");
+			var upstreams = reports.nodes[ reports.nodes.length - 1 ].upstreams; 
+			if(upstreams.length != ctl.length ) {
+				ctl.empty();
+				$.each(upstreams, function(_, stm) {
+					var btn = $("<button>").addClass("btn btn-info")
+					.text(stm.caption)
+					.attr('data-stmname', stm.name)
+					.appendTo("#channel_ctl");
+					if(stm.active) { btn.addClass("btn_clicked") }
+				});
+			}
+
+			$("#debug > p.mpeg1").text(JSMpeg.infos.mpeg1Time.join(","));
+			$("#debug > p.mjpeg").text(JSMpeg.infos.mjpegTime.join(","));
+		});
+
+		$(document).on('jsmpeg_modeswitch', function(evn, mode) {
+			var idn = $("#mode_indicator").removeClass("badge-success badge-warning");
+			if(mode === 'mjpeg') {
+				idn.addClass("badge-warning").text("M");
+			} else if( mode === 'mpeg1') {
+				idn.addClass("badge-success").text("V");
+			}
+		});
+
+		$(document).on('jsmpeg_connected', function(evn, source) {
+			setInfo("Connected");
+		});
+	})
 
 	</script>
 </head>
@@ -104,6 +128,10 @@ var intwsurl = "";
 			data-disable-gl="false"></div>
 		<div id="mode_indicator" class="position-absolute badge badge-success">V</div>
 		<div id="channel_ctl" class="mt-3 btn-group btn-group-lg"></div>
+		<div id="debug" class="mt-5 alert alert-light">
+			<p class="mpeg1"></p>
+			<p class="mjpeg"></p>
+		</div>
 	</div>
 </body>
 </html>

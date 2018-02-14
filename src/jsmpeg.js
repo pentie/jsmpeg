@@ -12,8 +12,7 @@ var JSMpeg =
 		mpeg1TimeQueLength: 20,
 		echoTimeQueLength: 20,
 		defaultSourceIndex: 0,
-		downgradeThresdhold: 3000,
-		autoDowngrade: false,
+		autoModeSwitch: false,
 		enableLog: true
 	},
 
@@ -167,10 +166,11 @@ var JSMpeg =
 		}.bind(this));
 	},
 
-	setDowngrade: function(thresdhole, callback) {
-		this.config.autoDowngrade = true;
-		this.config.downgradeThresdhold = thresdhole;
-		this.downgradeCallback = callback;
+	setModeSwitch: function(upperThreshold, lowerThreshold, callback) {
+		this.config.autoModeSwitch = true;
+		this.config.upperThreshold = upperThreshold;
+		this.config.lowerThreshold = lowerThreshold;
+		this.modeSwitchCallback = callback;
 	},
 
 	//======================================================//
@@ -256,12 +256,13 @@ var JSMpeg =
 		if (timeQue.length > this.config.mpeg1TimeQueLength) {
 			timeQue.pop();
 
-			if(this.config.autoDowngrade) {
+			if(this.config.autoModeSwitch) {
 				var valMax = Math.max.apply(null, timeQue)
-				if ( valMax > this.config.downgradeThresdhold) {
-					this.switchVideoMode('mjpeg');
-					if(typeof this.downgradeCallback === 'function') {
-						this.downgradeCallback();
+				if ( valMax > this.config.upperThreshold) {
+					var switch_to = 'mjpeg';
+					this.switchVideoMode(switch_to);
+					if(typeof this.modeSwitchCallback === 'function') {
+						this.modeSwitchCallback(switch_to);
 					}
 				}
 			}
@@ -287,6 +288,17 @@ var JSMpeg =
 		timeQue.unshift(renderTime);
 		if (timeQue.length > this.config.mjpegTimeQueLength) {
 			timeQue.pop();
+
+			if(this.config.autoModeSwitch) {
+				var valMin = Math.min.apply(null, timeQue)
+				if ( valMin < this.config.lowerThreshold) {
+					var switch_to = 'mpeg1';
+					this.switchVideoMode(switch_to);
+					if(typeof this.modeSwitchCallback === 'function') {
+						this.modeSwitchCallback(switch_to);
+					}
+				}
+			}
 		}
 	},
 
