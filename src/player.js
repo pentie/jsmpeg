@@ -20,10 +20,12 @@ var Player = function(url, options) {
 		options.streaming = false;
 	}
 
+	options.audio = options.audio || false;
 
 	this.maxAudioLag = options.maxAudioLag || 0.25;
 	this.loop = options.loop !== false;
-	this.autoplay = !!options.autoplay || options.streaming;
+	//this.autoplay = !!options.autoplay || options.streaming;
+	this.autoplay = !!options.autoplay;
 
 	this.demuxer = new JSMpeg.Demuxer.TS(options);
 	this.mjpeg = new JSMpeg.Decoder.MJpeg(options);
@@ -75,6 +77,7 @@ var Player = function(url, options) {
 	if (this.autoplay) {
 		this.play();
 	}
+	JSMpeg.log("player option", options);
 };
 
 Player.prototype.showHide = function(ev) {
@@ -90,6 +93,9 @@ Player.prototype.showHide = function(ev) {
 Player.prototype.play = function(ev) {
 	this.animationId = requestAnimationFrame(this.update.bind(this));
 	this.wantsToPlay = true;
+	if(typeof this.source.send_cmd_active === 'function') {
+		this.source.send_cmd_active(true);
+	}
 };
 
 Player.prototype.pause = function(ev) {
@@ -102,6 +108,9 @@ Player.prototype.pause = function(ev) {
 		// further, so we have to rewind it.
 		this.audioOut.stop();
 		this.seek(this.currentTime);
+	}
+	if(typeof this.source.send_deactive === 'function') {
+		this.source.send_cmd_active(false);
 	}
 };
 

@@ -1,0 +1,137 @@
+<!DOCTYPE html> <html><head> <title>视频现场直播</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="http://cdnjs.cat.net/ajax/libs/twitter-bootstrap/4.0.0/css/bootstrap.css">
+	<style type="text/css">
+	.container-full-width { padding: 0; }
+	.btn_clicked { background-color: #5cb85c!important; border-color: #5cb85c!important;}
+	#mode_indicator { top: 1%; right: 2%; }
+	</style>
+	
+	<script type="text/javascript" src="http://cdnjs.cat.net/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+	<script type="text/javascript">
+var intwsurl = "";
+	</script>
+
+	<script type="text/javascript">
+	jQuery.cachedScript = function( url, options ) {
+		options = $.extend( options || {}, { dataType: "script", cache: true, url: url });
+		return jQuery.ajax( options );
+	};
+
+	function setInfo(text) { document.title = text; }
+
+	var orig_title = document.title;
+    var BomQuery = function(n){
+        var m = window.location.search.match(new RegExp( "(\\?|&)"+n+"=([^&]*)(&|$)"));
+        return !m ? "":decodeURIComponent(m[2]);
+    };
+
+	(function(){
+		if(intwsurl === "") {
+			intwsurl = BomQuery("ws");
+		}
+		
+		if(intwsurl === "") {
+			var urlobj = new URL(document.location.href);
+			urlobj.protocol = "ws";
+			urlobj.pathname = '/';
+			intwsurl = urlobj.href
+		}
+
+		var inthost = new URL(intwsurl);
+		inthost.protocol = 'http';
+		inthost.pathname = '/';
+		var intbase = inthost.href;
+		$.ajax({
+			"url": intbase + 'manager/echo',
+			"timeout": 2000,
+		})
+		.fail(function(xhr, text, error) {
+			alert("intwsurl无法链接")
+		})
+		.done(function(d) {
+			setInfo("内网直播链接中...");
+			$.cachedScript(intbase + 'jsmpeg.js')
+			.done(function() {
+					JSMpeg.config.echoConnTimeout = 2000;
+					JSMpeg.config.reconnectInterval = 3000;
+					JSMpeg.config.mjpegFrameInterval = 200;
+					JSMpeg.config.mjpegTimeQueLength= 5;
+					JSMpeg.config.mpeg1TimeQueLength= 5;
+					JSMpeg.setModeSwitch(3000, 60, function(mode){
+						$(document).trigger('jsmpeg_modeswitch', mode);
+					});
+					JSMpeg.onHeartbeatReport = function( reports ) {
+						$(document).trigger('jsmpeg_reports', reports);
+					};
+					JSMpeg.onSourceConnected = function( source ) { 
+						$(document).trigger('jsmpeg_connected', source);
+					};
+					JSMpeg.CreateSingleVideo(document.querySelector("#jsmpeg"), intwsurl, "1280x720");
+				}
+			);
+		})
+	})();
+
+
+	$().ready(function() {
+		$("#channel_ctl").on("click", "button", function (evn) {
+			$("#channel_ctl > button.btn_clicked").removeClass("btn_clicked");
+			$(evn.target).addClass("btn_clicked");
+			var name = $(evn.target).data('stmname');
+			JSMpeg.switchUpstream(name);
+		});
+
+		$(document).on('jsmpeg_reports', function(evn, reports) {
+			var ctl = $("#channel_ctl");
+			var upstreams = reports.nodes[ reports.nodes.length - 1 ].upstreams; 
+			if(upstreams.length != ctl.length ) {
+				ctl.empty();
+				$.each(upstreams, function(_, stm) {
+					var btn = $("<button>").addClass("btn btn-info")
+					.text(stm.caption)
+					.attr('data-stmname', stm.name)
+					.appendTo("#channel_ctl");
+					if(stm.active) { btn.addClass("btn_clicked") }
+				});
+			}
+
+			$("#debug > p.mpeg1").text(JSMpeg.infos.mpeg1Time.join(","));
+			$("#debug > p.mjpeg").text(JSMpeg.infos.mjpegTime.join(","));
+		});
+
+		$(document).on('jsmpeg_modeswitch', function(evn, mode) {
+			var idn = $("#mode_indicator").removeClass("badge-success badge-warning");
+			if(mode === 'mjpeg') {
+				idn.addClass("badge-warning").text("M");
+			} else if( mode === 'mpeg1') {
+				idn.addClass("badge-success").text("V");
+			}
+		});
+
+		$(document).on('jsmpeg_connected', function(evn, source) {
+			setInfo("Connected");
+		});
+	})
+
+	</script>
+</head>
+<body class="bg-dark">
+	<div class="container-full-width container-fluid">
+		<div id="jsmpeg" class="jsmpeg" 
+			data-poster="http://vodplayerinfo-10005041.file.myqcloud.com/3035579109/vod_paster_pause/paster_pause1469013308.jpg"
+			data-autoplay="false"
+			data-url=""
+			data-start="mpeg1"
+			data-disable-gl="false"></div>
+		<div id="mode_indicator" class="position-absolute badge badge-success">V</div>
+		<div id="channel_ctl" class="mt-3 btn-group btn-group-lg"></div>
+		<div id="debug" class="mt-5 alert alert-light">
+			<p class="mpeg1"></p>
+			<p class="mjpeg"></p>
+		</div>
+	</div>
+</body>
+</html>

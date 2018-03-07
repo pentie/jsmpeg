@@ -8,10 +8,11 @@ var JSMpeg =
 		echoResponseTimeout: 3000,
 		reconnectInterval: 3000,
 		mjpegFrameInterval: 1000,
-		mjpegTimeQueLength: 50,
-		mpeg1TimeQueLength: 50,
-		echoTimeQueLength: 50,
+		mjpegTimeQueLength: 20,
+		mpeg1TimeQueLength: 20,
+		echoTimeQueLength: 20,
 		defaultSourceIndex: 0,
+		autoModeSwitch: false,
 		enableLog: true
 	},
 
@@ -112,19 +113,16 @@ var JSMpeg =
 			this.log( 'no source found');
 		}
 
-		var req = {
-			handler: 'manager',
-			userId: this.userid(),
-			cmd: 'active',
-			param: true
-		};
-
 		source.send(JSON.stringify({
 			handler: 'manager',
 			userId: this.userid(),
 			cmd: 'switchUpstream',
 			name: name
 		}));
+
+		if(!this.VideoElement.player.isPlaying) {
+			this.VideoElement.onClick();
+		}
 
 		return name;
 	},
@@ -166,6 +164,13 @@ var JSMpeg =
 
 			this.infos.videoMode = mode;
 		}.bind(this));
+	},
+
+	setModeSwitch: function(upperThreshold, lowerThreshold, callback) {
+		this.config.autoModeSwitch = true;
+		this.config.upperThreshold = upperThreshold;
+		this.config.lowerThreshold = lowerThreshold;
+		this.modeSwitchCallback = callback;
 	},
 
 	//======================================================//
@@ -213,12 +218,9 @@ var JSMpeg =
 		infos.mjpegTime.length = 0;
 		infos.mpeg1Time.length = 0;
 
-		source.send(JSON.stringify({
-			handler: infos.videoMode,
-			userId: this.userid(),
-			cmd: 'active',
-			param: true
-		}));
+		if(this.VideoElement.player.options.autoplay) {
+			source.send_cmd_active(true);
+		}
 
 		this.onSourceConnected( source );
 	},
@@ -253,10 +255,20 @@ var JSMpeg =
 		timeQue.unshift(interval_time);
 		if (timeQue.length > this.config.mpeg1TimeQueLength) {
 			timeQue.pop();
+
+			if(this.config.autoModeSwitch) {
+				var valMax = Math.max.apply(null, timeQue)
+				if ( valMax > this.config.upperThreshold) {
+					var switch_to = 'mjpeg';
+					this.switchVideoMode(switch_to);
+					if(typeof this.modeSwitchCallback === 'function') {
+						this.modeSwitchCallback(switch_to);
+					}
+				}
+			}
 		}
 
 		source.send(JSON.stringify(payload));
-		//this.log('intra_frame_calback:', payload.intra_crc32, payload.intra_interval);
 	},
 
 	on_mjpeg_rendered: function (source, renderTime) 
@@ -276,6 +288,17 @@ var JSMpeg =
 		timeQue.unshift(renderTime);
 		if (timeQue.length > this.config.mjpegTimeQueLength) {
 			timeQue.pop();
+
+			if(this.config.autoModeSwitch) {
+				var valMin = Math.min.apply(null, timeQue)
+				if ( valMin < this.config.lowerThreshold) {
+					var switch_to = 'mpeg1';
+					this.switchVideoMode(switch_to);
+					if(typeof this.modeSwitchCallback === 'function') {
+						this.modeSwitchCallback(switch_to);
+					}
+				}
+			}
 		}
 	},
 
@@ -332,10 +355,11 @@ var JSMpeg =
 			}
 		}
 		elm.dataset.url = url;
-		var video_obj = new JSMpeg.VideoElement(elm, res);
-		window.video_objs = [ video_obj ];
+		this.VideoElement = new JSMpeg.VideoElement(elm, res);
+		window.video_objs = [ this.VideoElement ];
 	},
 
+	/*
 	CreateVideoElements: function() {
 		window.video_objs = [];
 		var elements = document.querySelectorAll('.jsmpeg');
@@ -357,6 +381,7 @@ var JSMpeg =
 			window.video_objs.push(video_obj);
 		}
 	},
+	*/
 
 	Now: function() {
 		return window.performance 
@@ -375,6 +400,7 @@ var JSMpeg =
 		}
 	},
 
+	/*
 	standardDeviation: function (values) {
 		var average = function (data) {
 			var sum = data.reduce(function (sum, value) { return sum + value; }, 0);
@@ -391,6 +417,7 @@ var JSMpeg =
 
 		return Math.ceil(Math.sqrt(avgSquareDiff));
 	},
+	*/
 
 
 };
@@ -462,25 +489,28 @@ var VideoElement = function(element, res) {
 	element.playerInstance = this.player;
 
 	// Setup the poster element, if any
-	if (options.poster && !options.autoplay && !this.player.options.streaming) {
+	//if (options.poster && !options.autoplay && !this.player.options.streaming) {
+	//streaming is now pausable
+	if (options.poster && !options.autoplay) {
 		options.decodeFirstFrame = false;
 		this.poster = new Image();
 		this.poster.src = options.poster;
 		this.poster.addEventListener('load', this.posterLoaded)
 		addStyles(this.poster, {
 			display: 'block', zIndex: 1, position: 'absolute',
+			width: '100%', height: '100%',
 			top: 0, left: 0, bottom: 0, right: 0
 		});
 		this.container.appendChild(this.poster);
 	}
 
 	// Add the click handler if this video is pausable
-	if (!this.player.options.streaming) {
-		this.container.addEventListener('click', this.onClick.bind(this));
-	}
+	// if (!this.player.options.streaming) { // }
+	this.container.addEventListener('click', this.onClick.bind(this));
 
 	// Hide the play button if this video immediately begins playing
-	if (options.autoplay || this.player.options.streaming) {
+	//if (options.autoplay || this.player.options.streaming) {
+	if (options.autoplay)  {
 		this.playButton.style.display = 'none';
 	}
 
@@ -585,10 +615,12 @@ var Player = function(url, options) {
 		options.streaming = false;
 	}
 
+	options.audio = options.audio || false;
 
 	this.maxAudioLag = options.maxAudioLag || 0.25;
 	this.loop = options.loop !== false;
-	this.autoplay = !!options.autoplay || options.streaming;
+	//this.autoplay = !!options.autoplay || options.streaming;
+	this.autoplay = !!options.autoplay;
 
 	this.demuxer = new JSMpeg.Demuxer.TS(options);
 	this.mjpeg = new JSMpeg.Decoder.MJpeg(options);
@@ -640,6 +672,7 @@ var Player = function(url, options) {
 	if (this.autoplay) {
 		this.play();
 	}
+	JSMpeg.log("player option", options);
 };
 
 Player.prototype.showHide = function(ev) {
@@ -655,6 +688,9 @@ Player.prototype.showHide = function(ev) {
 Player.prototype.play = function(ev) {
 	this.animationId = requestAnimationFrame(this.update.bind(this));
 	this.wantsToPlay = true;
+	if(typeof this.source.send_cmd_active === 'function') {
+		this.source.send_cmd_active(true);
+	}
 };
 
 Player.prototype.pause = function(ev) {
@@ -667,6 +703,9 @@ Player.prototype.pause = function(ev) {
 		// further, so we have to rewind it.
 		this.audioOut.stop();
 		this.seek(this.currentTime);
+	}
+	if(typeof this.source.send_deactive === 'function') {
+		this.source.send_cmd_active(false);
 	}
 };
 
@@ -1345,6 +1384,17 @@ WSSource.prototype.jsonPost = function( url, data, callback, timeout ) {
 
 };
 
+WSSource.prototype.send_cmd_active = function (param) {
+	if(this.established) {
+		this.send(JSON.stringify({
+			handler: JSMpeg.infos.videoMode,
+			userId: JSMpeg.userid(),
+			cmd: 'active',
+			param: param
+		}));
+	}
+};
+
 return WSSource;
 
 })();
@@ -1729,7 +1779,7 @@ JsonMsg.prototype.write = function(buffer) {
 	var reports = JSMpeg.infos.reports; 	
 
 	if (reports.cmd == 'switchUpstream') {
-		console.log(reports);
+		JSMpeg.log('switchUpstream', reports);
 		return;
 	}
 

@@ -135,27 +135,36 @@ module.exports = class WebCameraSource
 			}
 
 			this.waitAvailableWebcam( cmdObj, (mjpgUrl)=> {
-				this.source = new JpegsFromWebCamera( this.config, mjpgUrl, this.feedProxy.bind(this), (err)=>{
-					this.isRunning = false;
-					if (err) {
-						let errStr = err.toString();
-						if (errStr.indexOf('Connection refused') >= 0) {
-							console.log('ffmpeg lost the camera');
-						}else 
-						if (errStr.indexOf('SIGKILL') >= 0) {
-							console.log('ffmpeg was killed');
-						} else {
-							console.log( err );
+				this.source = new JpegsFromWebCamera( this.config, mjpgUrl,
+					this.feedProxy.bind(this),
+					//endCallback
+					(stdout, stderr)=>{
+						this.isRunning = false;
+						this.source && this.source.stop();
+						this.active && this.waitWebcamBackAgain( mjpgUrl );
+						console.debug(stdout);
+						console.debug(stderr);
+					},
+					//errCallback
+					(err, stdout, stderr) => {
+						this.isRunning = false;
+						this.source && this.source.stop();
+						this.active && this.waitWebcamBackAgain( mjpgUrl );
+
+						console.debug(stdout);
+						console.debug(stderr);
+						if (err) {
+							let errStr = err.toString();
+							if (errStr.indexOf('Connection refused') >= 0) {
+								console.log('ffmpeg lost the camera');
+							}else 
+							if (errStr.indexOf('SIGKILL') >= 0) {
+								console.log('ffmpeg was killed');
+							} else {
+								console.log( err );
+							}
 						}
-					}
-					
-					this.source && this.source.stop();
-					this.active && this.waitWebcamBackAgain( mjpgUrl );
-				},
-				(err, stdout, stderr) => {
-					console.debug(stdout);
-					console.debug(stderr);
-				});
+					});
 
 				this.source.start( (cmdline )=>{
 					this.isRunning = true;
@@ -344,42 +353,38 @@ module.exports = class WebCameraSource
 	onvifScan( callback )
 	{
 		onvif.startProbe().then(( devInfoList ) => {
-// console.log(devInfoList);
 			devInfoList.forEach(( devInfo ) => {
-
-				let device = new onvif.OnvifDevice({
-					xaddr: devInfo.xaddrs[0],
-					user : this.config.user,
-					pass : this.config.pass
-				});
+/*
+{ 
+	urn: 'urn:uuid:97EAD713-33A1-463F-999F-16BEDE4F0A6E',
+    name: 'IP Webcam',
+    hardware: 'BUILD_608',
+    location: 'global',
+    types: [ 'dn:NetworkVideoTransmitter' ],
+    xaddrs: [ 'http://192.168.51.146:8080/onvif/device_service' ],
+    scopes: 
+     [ 'onvif://www.onvif.org/name/IP_Webcam',
+       'onvif://www.onvif.org/type/video_encoder',
+       'onvif://www.onvif.org/type/audio_encoder',
+       'onvif://www.onvif.org/hardware/BUILD_608',
+	   'onvif://www.onvif.org/location/global' 
+	] 
+}
+*/
+				// UUID: devInfo.urn
+				// Name: devInfo.name
+				// URL: devInfo.xaddrs[0]
 
 				let authStr = null;
 				if ((typeof this.config.user === 'string') && (this.config.user.length>1)) {
 					authStr = `${this.config.user}:${this.config.pass}`;
 				}
 
-				device.init().then(( info ) => {
-					let rtspUrl = device.getUdpStreamUrl();
-					let urlObj = url.parse(rtspUrl);
-					urlObj.auth = authStr;
-					urlObj.protocol = 'http';
-					urlObj.pathname = '/videofeed';
-
-					let mjpgUrl = url.format(urlObj);
-
-					callback( mjpgUrl );
-				}).catch((error) => {
-					let errStr = error.toString();
-					if (errStr.indexOf('ECONNREFUSED') >= 0) {
-						console.log('onvif lost the camera');
-						return;
-					}
-					if (errStr.indexOf('Network Error') >= 0) {
-						console.log('onvif Network Error');
-						return;
-					}
-					console.error(error);
-				});
+				let urlObj = url.parse(devInfo.xaddrs[0]);
+				urlObj.authStr = authStr;
+				urlObj.pathname = '/videofeed';
+				let mjpgUrl = url.format(urlObj);
+				callback( mjpgUrl );
 			});
 		}).catch((error) => {
 			console.error(error);
