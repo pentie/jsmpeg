@@ -13,6 +13,9 @@ var JSMpeg =
 		echoTimeQueLength: 20,
 		defaultSourceIndex: 0,
 		autoModeSwitch: false,
+		upperThreshold: 3000,
+		lowerThreshold: 60,
+		elementRes: "1280x720",
 		enableLog: true
 	},
 
@@ -25,8 +28,15 @@ var JSMpeg =
 		reports: null
 	},
 
-	onSourceConnected: function( source ) {this.log('connected:', source.conn_id);},
-	onHeartbeatReport: function( reports ) {this.log('heartbeat:', reports);},
+	onSourceConnected: function( source ) {
+		this.EmitEvent("jsmpeg:connected", source);
+	},
+	onHeartbeatReport: function( reports ) {
+		this.EmitEvent("jsmpeg:reports", reports);
+	},
+	onModeSwitched: function( switch_to ) {
+		this.EmitEvent("jsmpeg:modeswitch", switch_to);
+	},
 
 	echo: function( callback, payload )
 	{
@@ -163,14 +173,8 @@ var JSMpeg =
 			}
 
 			this.infos.videoMode = mode;
+			this.onModeSwitched(mode);
 		}.bind(this));
-	},
-
-	setModeSwitch: function(upperThreshold, lowerThreshold, callback) {
-		this.config.autoModeSwitch = true;
-		this.config.upperThreshold = upperThreshold;
-		this.config.lowerThreshold = lowerThreshold;
-		this.modeSwitchCallback = callback;
 	},
 
 	//======================================================//
@@ -261,9 +265,6 @@ var JSMpeg =
 				if ( valMax > this.config.upperThreshold) {
 					var switch_to = 'mjpeg';
 					this.switchVideoMode(switch_to);
-					if(typeof this.modeSwitchCallback === 'function') {
-						this.modeSwitchCallback(switch_to);
-					}
 				}
 			}
 		}
@@ -294,9 +295,6 @@ var JSMpeg =
 				if ( valMin < this.config.lowerThreshold) {
 					var switch_to = 'mpeg1';
 					this.switchVideoMode(switch_to);
-					if(typeof this.modeSwitchCallback === 'function') {
-						this.modeSwitchCallback(switch_to);
-					}
 				}
 			}
 		}
@@ -345,7 +343,7 @@ var JSMpeg =
 	Renderer: {},
 	AudioOutput: {}, 
 
-	CreateSingleVideo: function(elm, url, res) {
+	Init : function(elm, url, config) {
 		if( !url ) {
 			url = elm.dataset.url;
 			if ( !url ) {
@@ -354,11 +352,23 @@ var JSMpeg =
 				url = urlobj.href
 			}
 		}
+		if( !config ) {
+			config = {}
+		}
+		for (var key in config) {
+			if (this.config.hasOwnProperty(key)) {
+				this.config[key] = config[key];
+			}
+		}
+
 		elm.dataset.url = url;
-		this.VideoElement = new JSMpeg.VideoElement(elm, res);
+		this.VideoElement = new JSMpeg.VideoElement(elm, this.config.elementRes);
 		window.video_objs = [ this.VideoElement ];
 	},
 
+	CreateSingleVideo: function(elm, url, res) {
+		this.Init(elm, url);
+	},
 	/*
 	CreateVideoElements: function() {
 		window.video_objs = [];
@@ -398,6 +408,11 @@ var JSMpeg =
 				array[i] = value;
 			}
 		}
+	},
+
+	EmitEvent: function(name, data) {
+		var event = new CustomEvent(name, {detail: data});
+		document.dispatchEvent(event);
 	},
 
 	/*
