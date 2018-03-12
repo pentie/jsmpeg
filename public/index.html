@@ -8,20 +8,37 @@
 	<script type="text/javascript" src="jsmpeg.min.js"></script>
 	<script type="text/javascript">
 
-JSMpeg.config.echoConnTimeout = 2000;
-JSMpeg.config.reconnectInterval = 3000;
-JSMpeg.onHeartbeatReport = function( reports ) {
-	this.log('Report:', reports);
-};
-JSMpeg.onSourceConnected = function( source ) {
-	this.log('Connected:', source.conn_id);
-};
-document.addEventListener('DOMContentLoaded', JSMpeg.CreateVideoElements);
+document.addEventListener('DOMContentLoaded', function(evn){
+
+	var intwsurl, urlobj = new URL(document.location.href);
+	urlobj.protocol = "ws";
+	urlobj.pathname = '/';
+	intwsurl = urlobj.href
+
+	JSMpeg.Init(
+		document.querySelector("#jsmpeg"), intwsurl,
+		{
+			mjpegFrameInterval:200,
+			mjpegTimeQueLength: 5,
+			mpeg1TimeQueLength: 5,
+			autoModeSwitch: true,
+		});
+});
+
+document.addEventListener('jsmpeg:connected', function(evn){
+	JSMpeg.log('Connected:', evn.detail);
+});
+document.addEventListener('jsmpeg:reports', function(evn){
+	JSMpeg.log('Report:', evn.detail);
+});
+document.addEventListener('jsmpeg:modeswitch', function(evn){
+	JSMpeg.log('Switch:', evn.detail);
+});
 
 	</script>
 
 </head>
 <body>
-	<div class="jsmpeg" data-url="" data-start="mpeg1" data-disable-gl="false" data-audio="false"></div>
+	<div id="jsmpeg" data-url="" data-start="mpeg1" data-disable-gl="false" data-audio="false"></div>
 </body>
 </html>
