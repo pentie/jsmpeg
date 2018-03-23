@@ -1,11 +1,99 @@
-const { exec } = require('child_process');
-const ffmpeg = require('fluent-ffmpeg');
-const PassThroughStream = require('stream').PassThrough;
-const net = require('net');
-const uuidv1 = require('uuid/v1');
-const FileOnWrite = require('file-on-write');
+const resolve = require('path').resolve;
 const fs = require('fs');
+const dir = require('node-dir');
 const path = require('path');
+const FileOnWrite = require('file-on-write');
+
+function reOrderArray( list, order) 
+{
+	function shuffleArray (array){
+		for (var i = array.length - 1; i > 0; i--) {
+			var rand = Math.floor(Math.random() * (i + 1));
+			[array[i], array[rand]]=[array[rand], array[i]];
+		}
+	}
+
+	switch (order) {
+	    case 'asc': list.sort(); break;
+	    case 'desc': list.reverse(); break;
+	    case 'random': shuffleArray( list); break;
+	    default: list.sort();
+	}
+	return list;
+}
+
+function updateOnlineList( srcList, order, callback ) 
+{
+	let pathKeys = [];
+	let counter = 0;
+	srcList.forEach( mediaPath => {
+		pathKeys.push( resolve( mediaPath ));
+		counter++;
+		dir.subdirs(mediaPath, (err, subdirs) => {
+			counter--;
+			if (err) {
+				console.log('UpdateOnlineList error', err);
+				return;
+			}
+			subdirs.forEach( path => {
+				pathKeys.push( resolve(path) );
+			});	
+
+			if (counter === 0) {
+				let onlineList = getPathsFiles( pathKeys );
+				callback( onlineList );
+			}
+		});
+	});
+
+	function getPathsFiles( paths ) {
+		var newList = {};
+		paths.forEach( path => {
+			let subfiles = getFiles( path, order);
+			if (subfiles.length) {
+				newList[ path] = subfiles;
+			}
+		});
+		return newList;
+	}
+	
+	function getFiles( mediaPath, order ) 
+	{
+		let mediaFiles = dir.files( mediaPath, {sync:true, recursive:false});
+
+		let matchs = [/.mp4$/, /.rmvb$/, /.mkv$/];
+		let isMediaFile = function(filename) {
+			return matchs.some( regex => {
+				return regex.test( filename );
+			});
+		};
+
+		mediaFiles = mediaFiles.filter( fileName => {
+			return isMediaFile( fileName );
+		});
+		
+		return reOrderArray( mediaFiles, order );
+	}
+}
+
+function genPlaylist( srcList, disableList, order, callback ) 
+{
+	disableList = disableList.map( x => {
+		return resolve(x);
+	});
+
+	updateOnlineList( srcList, order, onlineList => {
+		let newList = [];
+		for (var path in onlineList) {
+			if (disableList.indexOf(path) === -1) {
+				newList = newList.concat( onlineList[path] );
+			}
+		}
+		reOrderArray( newList, order );
+		callback && callback( newList );
+	});
+}
+
 
 var writer = null;
 
@@ -38,373 +126,8 @@ function writeBinFile( chunk )
 	writer.write( chunk );
 }
 
-const SOI = new Buffer([0xff, 0xd8]);
-const EOI = new Buffer([0xff, 0xd9]);
-
-class MjpegStreamToJpegs
-{
-	constructor( jpegCallback ) 
-	{
-		if (!Buffer.prototype['indexOf']) bufferTools.extend();
-		this.jpegCallback = jpegCallback;
-		this._buffer = null;
-	}
-
-	checkpoint( chunk ) 
-	{
-		let image = null;
-		let imgStart, imgEnd;
-		while (chunk) {
-			if (this._buffer === null) {
-				chunk = -1 != (imgStart = chunk.indexOf(SOI)) ? chunk.slice(imgStart) : null;
-				if (chunk) this._buffer = new Buffer(0);
-				continue;
-			}
-
-			if (-1 != (imgEnd = chunk.indexOf(EOI))) {
-				imgEnd += EOI.length;
-				image = Buffer.concat([this._buffer, chunk.slice(0, imgEnd)]);
-				this.jpegCallback(image);
-				this._buffer = null;
-				chunk = chunk.slice(imgEnd);
-				continue;
-			}
-
-			this._buffer = Buffer.concat( [this._buffer, chunk] );
-			chunk = null;
-		}
-	}
-
-	flush() {
-		this._buffer = null;
-	}
-}
-
-class ChunksFromFFmpegBase
-{
-	constructor( config, chunksCallback ) 
-	{
-		this.config = config;
-		this.jobId =  uuidv1();
-		this.output = new PassThroughStream();
-		this.output.on('data', chunksCallback );
-		this.output.on('error', this.onError.bind(this));
-	}
-
-	onFFmpegStart( cmdline ) {
-		//console.log( this.constructor.name, cmdline);
-	}
-
-	onFFmepgEnd () {
-		console.log( this.constructor.name, ': ffmpeg processing finished !');
-	}
-
-	onError (err) {
-		console.log( this.constructor.name, 'error occurred: ' + err.message);
-		if (this.constructor.name === 'JpegsFromMp4File') {
-			console.log(this.mp4File);
-		}
-	}
-}
-
-class JpegsFromFFmpegBase extends ChunksFromFFmpegBase
-{
-	constructor( config, jpegsCallback ) 
-	{
-		let extractor = new MjpegStreamToJpegs( jpegsCallback );
-		super( config, function(chunk) {
-			extractor.checkpoint(chunk);
-		});
-	}
-}
-
-class JpegsFromMp4File extends JpegsFromFFmpegBase
-{
-	constructor( config, mp4File, jpegsCallback, endCallback ) 
-	{
-		super(config, jpegsCallback);
-		this.mp4File = mp4File;
-		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
-		this.errCallback = endCallback || this.onError.bind(this) ;
-	}
-
-	start( callback ) 
-	{
-		callback = callback || this.onFFmpegStart.bind(this);
-		let inputOptions = this.config.inputOptions? this.config.inputOptions : [];
-
-		this.command = ffmpeg()
-			.input( this.mp4File )
-			.native()
-			.inputOptions( inputOptions )
-			.output( this.output )
-			.outputOptions([ '-f mjpeg', '-c:v mjpeg' ])
-			.videoFilters( this.config.filter )
-			.size( this.config.size )
-			.on('start', callback)
-			.on('error', this.errCallback)
-			.on('end', this.endCallback);
-
-		this.command.run();
-		return this;
-	}
-
-	stop() {
-		this.command && this.command.kill('SIGKILL');
-	}
-}
-
-class JpegsFromWebCamera extends JpegsFromFFmpegBase
-{
-	constructor( config, url, jpegsCallback, endCallback, errCallback ) 
-	{
-		super(config, jpegsCallback);
-		this.url = url;
-		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
-		this.errCallback = errCallback || this.onError.bind(this) ;
-	}
-
-	start (callback) 
-	{
-		callback = callback || this.onFFmpegStart.bind(this);
-		let inputOptions = this.config.inputOptions? this.config.inputOptions : [];
-
-		this.command = ffmpeg()
-			.input(this.url)
-			.inputOptions( inputOptions )
-			.output(this.output)
-			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
-			.videoFilters( this.config.filter )
-			.size( this.config.size )
-			.on('start', callback)
-			.on('error', this.errCallback)
-			.on('end', this.endCallback);
-		this.command.run();
-		return this;
-	}
-
-	stop() {
-		this.command && this.command.kill('SIGKILL');
-	}
-}
-
-class JpegsFromUsbCamera extends JpegsFromFFmpegBase
-{
-	constructor( config, devPath, jpegsCallback, endCallback, errCallback ) 
-	{
-		super( config, jpegsCallback );
-		this.devPath = devPath;
-		this.command = null;
-		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
-		this.errCallback = errCallback || this.onError.bind(this) ;
-	}
-
-	start( callback ) 
-	{
-		callback = callback || this.onFFmpegStart.bind(this);
-	
-		let inputOptions = this.config.inputOptions? this.config.inputOptions : ['-f v4l2'];
-		if (inputOptions.indexOf('-f v4l2') === -1) {
-			inputOptions.push( '-f v4l2' );
-		}
-
-		this.command = ffmpeg()
-			.input(this.devPath)
-			.inputOptions( inputOptions )
-			.output(this.output)
-			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
-			.videoFilters( this.config.filter )
-			.size( this.config.size )
-			.on('start', callback)
-			.on('error', this.errCallback)
-			.on('end', this.endCallback);
-
-		this.command.run();
-		return this;
-	}
-
-	stop() {
-		this.command && this.command.kill('SIGKILL');
-	}
-}
-
-class Mpeg1tsFromJpegs extends ChunksFromFFmpegBase
-{
-	constructor( config, mpegtsCallback, qscale=8, endCallback ) 
-	{
-		super( config, mpegtsCallback );
-		this.qscale = qscale;
-		
-		this.input = new PassThroughStream();
-		this.input.on('error', this.onError.bind(this));
-		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
-		this.errCallback = endCallback || this.onError.bind(this) ;
-	}
-
-	write( chunk ) {
-		this.input.write(chunk);	
-	}
-
-	start( callback ) 
-	{
-		callback = callback || this.onFFmpegStart.bind(this);
-		this.command = ffmpeg()
-			.input(this.input)
-			.inputFormat('mjpeg')
-			.output(this.output)
-			.outputOptions(['-f mpegts', '-c:v mpeg1video', '-q:v '+ this.qscale, '-bf 0'])
-			.outputFps(30)
-			.on('start', callback)
-			.on('error', this.errCallback)
-			.on('end', this.endCallback);
-
-		this.command.run();
-		return this;
-	}
-
-	stop() {
-		this.command && this.command.kill('SIGKILL');
-	}
-}
-
-class JpegsToLiveRtmp
-{
-	constructor( config, endCallback ) 
-	{
-		this.config = config;
-		this.input = new PassThroughStream();
-		this.input.on('error', endCallback);
-		this.endCallback = endCallback;
-	}
-
-	write( chunk ) {
-		this.input.write(chunk);	
-	}
-
-	onError( error, stdout, stderr ) 
-	{
-		console.debug(stdout);
-		console.debug(stderr);
-	}
-
-	onEnd( error ) 
-	{
-		this.endCallback( error );
-	}
-
-	onStart( cmdline ) 
-	{
-		console.log( this.constructor.name, cmdline);
-	}
-
-	start( startCallback ) 
-	{
-		startCallback = startCallback || this.onStart.bind(this); 
-
-		this.command = ffmpeg();
-		this.command.input(this.input);
-		this.command.inputFormat('mjpeg');
-
-		this.config.inputs.forEach( (config) => {
-			if (config.active !== undefined) {
-				if (config.active !== true) {
-					return;
-				}
-			}
-
-			this.command.input( config.inputFrom );
-			this.command.inputOptions( config.options );
-		});
-
-		this.config.outputs.forEach( (config) => {
-			if (config.active !== undefined) {
-				if (config.active !== true) {
-					return;
-				}
-			}
-
-			this.command.output( config.outputTo );
-			this.command.outputOptions( config.options );
-		});
-
-		this.command.on('start', startCallback )
-		this.command.on('error', this.onError.bind(this) );
-		this.command.on('end', this.onEnd.bind(this) );
-		this.command.run();
-		return this;
-	}
-
-	stop() {
-		this.command && this.command.kill('SIGKILL');
-	}
-}
-
-class LocalToLiveRtmp
-{
-	constructor( config, inputObj, endCallback ) 
-	{
-		this.config = config;
-		this.endCallback = endCallback;
-		this.input = inputObj.src;
-		this.inputOptions = inputObj.options;
-	}
-
-	onError( error, stdout, stderr ) 
-	{
-		console.log(stdout);
-		console.log(stderr);
-		this.endCallback(error);
-	}
-
-	onEnd( error ) 
-	{
-		this.endCallback( error );
-	}
-
-	onStart( cmdline ) 
-	{
-		console.log( this.constructor.name, cmdline);
-	}
-
-	start( startCallback ) 
-	{
-
-		startCallback = startCallback || this.onStart.bind(this); 
-
-		this.command = ffmpeg();
-
-		this.command.input( this.input );
-		this.command.inputOptions( this.inputOptions );
-
-		this.config.outputs.forEach( (config) => {
-			if (config.active !== undefined) {
-				if (config.active !== true) {
-					return;
-				}
-			}
-
-			this.command.output( config.outputTo );
-			this.command.outputOptions( config.options );
-		});
-
-		this.command.on('start', startCallback )
-		this.command.on('error', this.onError.bind(this) );
-		this.command.on('end', this.onEnd.bind(this) );
-		this.command.run();
-		return this;
-	}
-
-	stop() {
-		this.command && this.command.kill('SIGKILL');
-	}
-}
 
 module.exports = {
 	writeBinFile,
-	JpegsFromWebCamera,
-	JpegsFromUsbCamera,
-	JpegsFromMp4File,
-	Mpeg1tsFromJpegs,
-	JpegsToLiveRtmp,
-	LocalToLiveRtmp
+	genPlaylist
 };

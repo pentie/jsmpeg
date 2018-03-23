@@ -1,5 +1,6 @@
 
-const {writeBinFile, Mpeg1tsFromJpegs} = require('./module-common.js');
+const {writeBinFile} = require('./module-common.js');
+const {Mpeg1tsFromJpegs} = require('./module-transcode.js');
 
 const DEFAULT_QSCALE = 8;
 
@@ -52,7 +53,7 @@ module.exports = class Mpeg1VideoHandler
 		this.downstream( chunk, client.downClients );
 	}
 
-	feed (chunk) 
+	feedImage( chunk ) 
 	{
 		this.chunker.write(chunk);
 	}

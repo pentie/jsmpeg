@@ -1,5 +1,5 @@
 
-const {JpegsFromWebCamera} = require('./module-common.js');
+const {JpegsFromWebCamera} = require('./module-transcode.js');
 const AdvertiseBox = require('./module-advertise.js');
 const tcpPortUsed = require('tcp-port-used');
 const url = require('url');
@@ -16,10 +16,15 @@ module.exports = class WebCameraSource
 	constructor(env) 
 	{
 		this.sourceName = WebCameraSource.name;
-		this.feed = env.get('feed');
+		this.feedImage = env.get('feedImage');
+		this.feedPCM = env.get('feedPCM');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.advConfig = env.get('configs').get('advertise');
-		this.advBox = new AdvertiseBox( this.advConfig, this.feedAdvertise.bind(this));
+		this.advBox = new AdvertiseBox( 
+			this.advConfig, 
+			this.feedAdvertiseImage.bind(this),
+			this.feedAdvertisePCM.bind(this)
+		);
 		this.advBox.ownerName = this.sourceName;
 
 		this.onvifInterval = this.config.onvifInterval || ONVIF_INTERVAL;
@@ -266,17 +271,27 @@ module.exports = class WebCameraSource
 		return cmdObj;
 	}
 
-	feedAdvertise( jpeg ) 
+	feedAdvertiseImage( jpeg ) 
 	{
 		if ( this.isRunning ) {
 			return;
 		}
-		this.active && this.feed( jpeg );
+
+		this.active && this.feedImage( jpeg );
+	}
+
+	feedAdvertisePCM ( chunk ) 
+	{
+		if ( this.isRunning ) {
+			return;
+		}
+
+		this.active && this.feedPCM( chunk );
 	}
 
 	feedProxy( jpeg ) 
 	{
-		this.active && this.feed( jpeg );
+		this.active && this.feedImage( jpeg );
 	}
 
 	pause ()
