@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const NodeCache = require('node-cache');
 const os = require('os');
 const fork = require('child_process').fork;
+const {wsClient} = require('./module-wsClient.js');
 
 const UPSTREAM_RECONNECT_INTERVAL = 300;
 
@@ -26,10 +27,12 @@ module.exports = class WebSocketHub
 		this.sourcerClass = new Array();
 		this.missingClients = new Array();
 		this.upstreamClients = {};
-		this.routeCmds = {};
+		this.routeHttpCmds = {};
+		this.routeWsCmds = {};
 
 		this.env = new Map(); 
-		this.env.set('feed', this.feed.bind(this));
+		this.env.set('feedImage', this.feedImage.bind(this));
+		this.env.set('feedPCM', this.feedPCM.bind(this));
 		this.env.set('configs', this.configs);
 		this.env.set('getConfig', this.getConfig.bind(this));
 		this.env.set('eachClient', this.eachClient.bind(this));
@@ -45,12 +48,31 @@ module.exports = class WebSocketHub
 		this.env.set('switchUpstream', this.switchUpstream.bind(this));
 	}
 
+	getWsHandler( url ) 
+	{
+		let reqCmd = url.split('/',2).filter(e=>e.trim() != '');
+		if (reqCmd.length === 0) return [null, null];
+
+		let respFunc = this.routeWsCmds[reqCmd[0]];
+		if ( ! respFunc ) return [null, null];
+ 
+		return [respFunc, reqCmd[0]];
+	}
+
+	getHttpHandler( url ) 
+	{
+		let reqCmd = url.split('/',2).filter(e=>e.trim() != '');
+		if (reqCmd.length === 0) return null;
+
+		let respFunc = this.routeHttpCmds[reqCmd[0]];
+		if (!respFunc) return null;
+
+		return respFunc;
+	}
+
 	httpHandler( req, res, next)
 	{
-		let reqCmd = req.url.split('/',2).filter(e=>e.trim() != '');
-		if (reqCmd.length === 0) return next();
-
-		let respFunc = this.routeCmds[reqCmd[0]];
+		let respFunc = this.getHttpHandler( req.url );
 		if (!respFunc) return next();
 
 		respFunc( req, res, next);
@@ -65,7 +87,7 @@ module.exports = class WebSocketHub
 		app.use(cookieParser());
 		app.use(bodyParser.json());
 		app.use(this.httpHandler.bind(this));
-		app.use(function (req, res) {
+		app.use((req, res) =>  {
 			res.json({ status: 'error', error: "handler not found" });
 		});
 
@@ -74,18 +96,40 @@ module.exports = class WebSocketHub
 
 		this.socketServer.connectionCount = 0;
 
-		this.socketServer.on('connection', (function(socket, upgradeReq) {
+		this.socketServer.on('connection', (socket, incomingMsg) => {
+			socket.HUBNAME = 'main';
 			socket.uuid = uuidv1();
-
 			this.socketServer.connectionCount++;
-			console.log('New ImageFeed Connection: ' + this.socketServer.connectionCount+' total)');
 
-			socket.on('close', (function(code, message){
+			socket.on('close', (code, message) => {
 				this.socketServer.connectionCount--;
-				console.log('Disconnected ImageFeed('+this.socketServer.connectionCount+' total)');
-			}).bind(this));
+				console.log(socket.HUBNAME + ' disconnected: ' + socket.uuid);
+			});
 
-			socket.on('message', (function(dataStr){
+			socket.on('error', (err)=> {
+				console.log('ws err: '+err);	
+			});
+
+			let [respFunc, ownerName] = this.getWsHandler( incomingMsg.url );
+
+			if ( respFunc ) 
+			{
+				socket.HUBNAME = ownerName;
+				socket.respFunc = respFunc;
+				socket.incomingUrl = incomingMsg.url;
+				respFunc( socket, null );
+
+				socket.on('message', function( data ) {
+					this.respFunc( this, data );
+				});
+
+				console.log(socket.HUBNAME + ' new connection: ' + socket.uuid);
+				return;
+			}
+
+			console.log(socket.HUBNAME + ' new connection: ' + socket.uuid);
+
+			socket.on('message', (dataStr)=> {
 				let req = null;
 				try {
 					req = JSON.parse(dataStr);
@@ -93,10 +137,6 @@ module.exports = class WebSocketHub
 				}
 
 				req && this.onDownRequest(socket, req);
-			}).bind(this));
-
-			socket.on('error', function(err){
-				console.log('image feed err: '+err);	
 			});
 
 			if ( ! this.isCenter) {
@@ -106,12 +146,12 @@ module.exports = class WebSocketHub
 				}
 			}
 
-			this.handlers.forEach(function(handler) {
+			this.handlers.forEach((handler) => {
 				if (typeof handler.onDownConnect === "function") { 
 					handler.onDownConnect( socket );
 				}
 			});
-		}).bind(this));
+		});
 
 		this.webServer.listen(port, ()=> {
 			console.log('Listening on %d', port);
@@ -211,7 +251,11 @@ module.exports = class WebSocketHub
 			let source = new Sourcer(this.env);
 			this.sources.push(source);
 			if (typeof source.http === 'function') { 
-				this.routeCmds[source.sourceName] = source.http.bind(source);
+				this.routeHttpCmds[source.sourceName] = source.http.bind(source);
+			}
+
+			if (typeof source.websocket === 'function') { 
+				this.routeWsCmds[source.sourceName] = source.websocket.bind(source);
 			}
 		});
 
@@ -224,7 +268,10 @@ module.exports = class WebSocketHub
 			let handler = new Handler(this.env);
 			this.handlers.push(handler);
 			if (typeof handler.http === 'function') { 
-				this.routeCmds[handler.handlerName] = handler.http.bind(handler);
+				this.routeHttpCmds[handler.handlerName] = handler.http.bind(handler);
+			}
+			if (typeof handler.websocket === 'function') { 
+				this.routeWsCmds[handler.handlerName] = handler.websocket.bind(handler);
 			}
 		}.bind(this));
 	}
@@ -317,11 +364,20 @@ module.exports = class WebSocketHub
 		return this.nodeId;
 	}
 
-	feed( jpeg ) 
+	feedImage( chunk ) 
 	{
 		this.handlers.forEach(function(handler) {
-			if (typeof handler.feed === "function") { 
-				handler.feed( jpeg );
+			if (typeof handler.feedImage === "function") { 
+				handler.feedImage( chunk );
+			}
+		});
+	}
+
+	feedPCM( chunk ) 
+	{
+		this.handlers.forEach(function(handler) {
+			if (typeof handler.feedPCM === "function") { 
+				handler.feedPCM( chunk );
 			}
 		});
 	}
@@ -353,14 +409,25 @@ module.exports = class WebSocketHub
 		this.handlerClass.push(Handler);
 	}
 
-	findClient (callback, whiteList) 
+	isTargetClient( client, hubName ) 
+	{
+		if (client.readyState !== WebSocket.OPEN) {
+			return false;
+		}
+		if (client.HUBNAME !== hubName) {
+			return false;
+		}
+		return true;
+	}
+
+	findClient (callback, whiteList, hubName = 'main') 
 	{
 		let resClient = null;
 
 		if ( whiteList ) {
 			for ( var i=0; i < whiteList.length; i++ ) {
 				let client = whiteList[i]; 
-				if (client.readyState !== WebSocket.OPEN) {
+				if ( ! this.isTargetClient( client, hubName )) {
 					continue;
 				}
 				if ( callback( client )) { 
@@ -369,8 +436,8 @@ module.exports = class WebSocketHub
 				}
 			}
 		} else {
-			this.socketServer.clients.forEach( function(client) {
-				if (client.readyState !== WebSocket.OPEN) {
+			this.socketServer.clients.forEach( (client) => {
+				if ( ! this.isTargetClient( client, hubName )) {
 					return;
 				}
 				if ( callback( client )) { 
@@ -382,25 +449,25 @@ module.exports = class WebSocketHub
 		return resClient;
 	}
 
-	broadcast( chunk, whiteList ) 
+	broadcast( chunk, whiteList, hubName = 'main' ) 
 	{
 		this.eachClient(function(client){
 			client.send(chunk);
-		}, whiteList);
+		}, whiteList, hubName);
 	}
 
-	eachClient( callback, whiteList ) 
+	eachClient( callback, whiteList, hubName = 'main' ) 
 	{
 		if ( whiteList ) {
 			for ( var i=0; i < whiteList.length; i++ ) {
 				let client = whiteList[i]; 
-				if (client.readyState === WebSocket.OPEN) {
+				if ( this.isTargetClient( client, hubName )) {
 					callback(client);
 				}
 			}
 		} else {
-			this.socketServer.clients.forEach( function(client) {
-				if (client.readyState === WebSocket.OPEN) {
+			this.socketServer.clients.forEach( (client)=> {
+				if ( this.isTargetClient( client, hubName )) {
 					callback(client);
 				}
 			});
@@ -576,7 +643,7 @@ module.exports = class WebSocketHub
 				}
 			};
 
-			let upstreamClient = this.wsClient( config.url, interval, function( data ){
+			let upstreamClient = wsClient( config.url, interval, function( data ){
 				var client = this;
 
 				if (data === null) {
@@ -616,48 +683,4 @@ module.exports = class WebSocketHub
 		}
 	}
 
-	wsClient(url, interval, recv) 
-	{
-		var WSClient = function() {
-			this.url = url;
-			this.interval = interval;
-			this.reconnectTimeoutId = 0;
-			this.recv = recv;
-		};
-
-		WSClient.prototype.start = function() {
-			this.socket = new WebSocket(this.url, {
-				perMessageDeflate: false
-			});
-
-			this.socket.binaryType = 'nodebuffer';
-
-			this.socket.on('message', function incoming(data) {
-				this.recv(data);
-			}.bind(this));
-
-			this.socket.on('open', function open(){
-				this.recv(null);
-			}.bind(this));
-
-			this.socket.on('error', this.onClose.bind(this));
-			this.socket.on('close', this.onClose.bind(this));
-			return this;
-		};
-
-		WSClient.prototype.onClose = function(ev) {
-			clearTimeout(this.reconnectTimeoutId);
-			this.reconnectTimeoutId = setTimeout(function(){
-				this.start();	
-			}.bind(this), this.interval);
-		};
-
-		WSClient.prototype.send = function(data) {
-			if (this.socket.readyState === WebSocket.OPEN) {
-				this.socket.send(data);
-			}
-		};
-
-		return new WSClient().start();
-	}
 };

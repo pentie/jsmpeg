@@ -12,59 +12,12 @@ module.exports = class MJpegHandler
 		this.feedList = new Array();
 		this.upstreamLastTime = Date.now();
 
-		this.mjpegName = this.config.mjpegStreamName? this.config.mjpegStreamName : 'seed.mjpeg';
-		this.mjpeUrl= '/mjpeg/' + this.mjpegName;
-		this.mjpegBoundary = 'MjpegBoundary';
-		this.mjpegAudience = new Array();
-
 		this.interval = this.config.mjpegUpdateInterval? parseInt(this.config.mjpegUpdateInterval) : 100;
 	}
 
 	http( req, res )
 	{
-		if (req.url !== this.mjpeUrl ) {
-			res.json({status: 'error', error: 'command error.'});
-			return;
-		}
-
-		this.mjpegStream( req, res );
-	}
-
-	feedMjpegStream( jpeg ) 
-	{
-		if (this.mjpegAudience.length === 0) {
-			return;
-		}
-
-		let content = Buffer(jpeg);
-		let head =  '--' + this.mjpegBoundary + "\r\n" +
-			"Content-Type: image/jpeg\r\n" + 
-			"Content-Length: " + content.length + "\r\n\r\n";
-
-		this.mjpegAudience.forEach( function( res ) {
-			res.write( head );
-			res.write( content, 'binary');
-			res.write("\r\n");
-		});
-	}
-
-	mjpegStream( req, res )
-	{
-		let self = this;
-		self.mjpegAudience.push( res );
-
-		res.writeHead(200, {
-			'Content-Type': 'multipart/x-mixed-replace;boundary=' + self.mjpegBoundary,
-			'Connection': 'keep-alive',
-			'Expires': 'Mon, 01 Jul 1980 00:00:00 GMT',
-			'Cache-Control': 'no-cache, no-store, must-revalidate',
-			'Pragma': 'no-cache'
-		});
-
-		res.socket.on('close', function () {
-			console.log('exiting mjpeg client!');
-			self.mjpegAudience.splice(self.mjpegAudience.indexOf(res), 1);
-		});
+		res.json({ status: 'ok', message: this.handlerName + ' handler responses' });
 	}
 
 	infos () 
@@ -105,15 +58,13 @@ module.exports = class MJpegHandler
 		}, this.interval, client);
 	}
 
-	feed (chunk) 
+	feedImage( chunk ) 
 	{
-		this.downstream (chunk);
+		this.downstream( chunk );
 	}
 
 	downstream( chunk, downClients ) 
 	{
-		this.feedMjpegStream( chunk );
-
 		if (this.feedList.length === 0) {
 			return;
 		}

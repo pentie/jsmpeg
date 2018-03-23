@@ -44,7 +44,12 @@
 			size: '1280x720',
 			loop: 'yes',  // yes, no
 			order: 'random', // asc, desc, random
-			src: [ 'public/media/sub0', 'public/media/sub1', 'public/media/sub2' ]		
+			src: [  
+				'public/media/sub0', 
+				'public/media/sub1', 
+				'public/media/sub2',
+				//'/home/and/Downloads/movies'
+			]
 		},
 	},
 
@@ -66,9 +71,8 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
-		mjpegStreamName: 'seed.mjpeg',
 	},{
-		active: true,
+		active: false,
 		port: 8081,
 		allowSources: ['usbCamera', 'localMp4'],
 		defaultSource: 'usbCamera',
@@ -77,9 +81,8 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
-		mjpegStreamName: 'seed.mjpeg',
 	},{
-		active: true,
+		active: false,
 		port: 8082,
 		allowSources: ['usbCamera'],
 		defaultSource: 'usbCamera',
@@ -88,7 +91,6 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
-		mjpegStreamName: 'seed.mjpeg',
 	},{
 		active: false,
 		port: 8080,
@@ -117,7 +119,11 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
-		mjpegStreamName: 'seed.mjpeg',
+
+		// serve live stream
+		streamMjpeg: 'seed.mjpeg',
+		streamWav: 'seed.wav',
+
 		//livestream: 'tencentCloudLive',
 	    },{
 		active: false,
@@ -128,7 +134,6 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
-		mjpegStreamName: 'seed.mjpeg',
 		//livestream: 'tencentCloudLive',
 	}],
 
@@ -203,7 +208,6 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		mjpegUpdateInterval: 100,
-		mjpegStreamName: 'seed.mjpeg',
 		upstreams :[{
 			active: true,
 			default: true,
@@ -227,7 +231,6 @@
 		mpeg1MaxUser: 20,
 		mjpegMaxUser: 200,
 		mjpegUpdateInterval: 100,
-		mjpegStreamName: 'seed.mjpeg',
 		upstreams :[{
 			active: true,
 			default: true,
@@ -255,7 +258,7 @@
 		screen: '0',
 		vo: 'vdpau',
 		type: 'mjpeg',
-		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
+		url: 'http://localhost:8080/stream/seed.mjpeg',
 		debug: true,
 		verbose: true
 	}, {
@@ -263,7 +266,7 @@
 		screen: '1',
 		vo: 'vdpau',
 		type: 'mjpeg',
-		url: 'http://localhost:8080/mjpeg/seed.mjpeg',
+		url: 'http://localhost:8080/stream/seed.mjpeg',
 		debug: true,
 		verbose: true
 	}],

@@ -1,7 +1,6 @@
 
-const resolve = require('path').resolve;
-const dir = require('node-dir');
-const {JpegsFromMp4File} = require('./module-common.js');
+const {genPlaylist} = require('./module-common.js');
+const {JpegsPcmFromFile} = require('./module-transcode.js');
 
 module.exports = class LocalMp4Source
 {
@@ -12,7 +11,8 @@ module.exports = class LocalMp4Source
 	constructor( env ) 
 	{
 		this.sourceName = LocalMp4Source.name;
-		this.feed = env.get('feed');
+		this.feedImage = env.get('feedImage');
+		this.feedPCM = env.get('feedPCM');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.size = this.config.size;
 		this.active = false;
@@ -39,20 +39,9 @@ module.exports = class LocalMp4Source
 		if (this.config.autoStart === true) {
 			this.start();
 		} else {
-			this.getNewPlaylist( [], this.nowOrder);
-		}
-	}
-
-	list()
-	{
-		return {
-			name: this.sourceName,
-			active: this.active,
-			caption: this.config.caption,
-			loop: this.nowLoop,
-			order: this.nowOrder,
-			disableList: this.disableList,
-			onlineList: this.onlineList
+			genPlaylist( this.config.src, [], this.nowOrder, ollist=>{
+				this.onlineList	= ollist;
+			});
 		}
 	}
 
@@ -70,13 +59,13 @@ module.exports = class LocalMp4Source
 		}
 
 		if (this.file2Play.length === 0) {
-			this.getNewPlaylist( cmdObj.disableList, cmdObj.order, function( list ){
+			genPlaylist( this.config.src, cmdObj.disableList, cmdObj.order, list => {
 				this.file2Play = list;
-				setImmediate( function(){
+				setImmediate( ()=> {
 					cmdObj.internalCall = true;
 					this.active && this.start( cmdObj );
-				}.bind(this));
-			}.bind(this));
+				});
+			});
 
 			this.disableList = cmdObj.disableList;
 			this.nowLoop = cmdObj.loop;
@@ -100,101 +89,38 @@ module.exports = class LocalMp4Source
 		} while(false);
 
 		console.log('playing: ', mp4File);
-		this.source = new JpegsFromMp4File( this.config, mp4File, this.feedProxy.bind(this), ()=>{
-			setImmediate( ()=>{
-				cmdObj.internalCall = true;
-				this.active && this.start( cmdObj );
-			});
+		this.source = new JpegsPcmFromFile( this.config, mp4File, 
+			this.feedImageProxy.bind(this),
+			this.feedPcmProxy.bind(this),
+			()=>{
+				setImmediate( ()=>{
+					cmdObj.internalCall = true;
+					this.active && this.start( cmdObj );
+				});
 		}).start( callback );
 	}
 
-	getNewPlaylist( disableList, order, callback ) 
+	feedImageProxy( jpeg ) 
 	{
-		disableList = disableList.map( (x) => {
-			return resolve(x);
-		});
-
-		this.updateOnlineList( this.config.src, order, function(onlineList){
-			let newList = [];
-			for (var path in onlineList) {
-				if (disableList.indexOf(path) === -1) {
-					newList = newList.concat( onlineList[path] );
-				}
-			}
-			this.reOrderArray( newList, order );
-			callback && callback( newList );
-		}.bind(this));
+		this.active && this.feedImage( jpeg );
 	}
 
-	updateOnlineList( mp4Paths, order, callback ) 
+	feedPcmProxy( chunk ) 
 	{
-		let reOrderArray = this.reOrderArray;
-		let pathKeys = [];
-		let counter = 0;
-		mp4Paths.forEach(function( mp4Path) {
-			pathKeys.push( resolve( mp4Path ));
-			counter++;
-			dir.subdirs(mp4Path, function(err, subdirs) {
-				counter--;
-				if (err) {
-					console.log('updateOnlineList error', err);
-					return;
-				}
-				subdirs.forEach( function( path ){
-					pathKeys.push( resolve(path) );
-				});	
-
-				if (counter === 0) {
-					this.onlineList = getPathsFiles( pathKeys );
-					callback( this.onlineList );
-				}
-			}.bind(this));
-		}.bind(this));
-
-		function getPathsFiles( paths ) {
-			var newList = {};
-			paths.forEach( function(path) {
-				let subfiles = getFiles( path, order);
-				if (subfiles.length) {
-					newList[ path] = subfiles;
-				}
-			})
-			return newList;
-		}
-		
-		function getFiles( mp4Path, order ) 
-		{
-			let mp4Files = dir.files( mp4Path, {sync:true, recursive:false});
-
-			mp4Files = mp4Files.filter(function(fileName) {
-				return /mp4$/.test(fileName);
-			});
-			
-			return reOrderArray( mp4Files, order );
-		}
+		this.active && this.feedPCM( chunk );
 	}
 
-	reOrderArray( list, order) 
+	list()
 	{
-		function shuffleArray (array){
-			for (var i = array.length - 1; i > 0; i--) {
-				var rand = Math.floor(Math.random() * (i + 1));
-				[array[i], array[rand]]=[array[rand], array[i]];
-			}
+		return {
+			name: this.sourceName,
+			active: this.active,
+			caption: this.config.caption,
+			loop: this.nowLoop,
+			order: this.nowOrder,
+			disableList: this.disableList,
+			onlineList: this.onlineList
 		}
-
-		switch (order) {
-		    case 'asc': list.sort(); break;
-		    case 'desc': list.reverse(); break;
-		    case 'random': shuffleArray( list); break;
-		    default: list.sort();
-		}
-		return list;
-	}
-
-	feedProxy( jpeg ) 
-	{
-		this.active && this.feed( jpeg );
 	}
 
 	pause ()

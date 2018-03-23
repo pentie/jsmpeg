@@ -1,7 +1,7 @@
 
 const { exec } = require('child_process');
-const { JpegsFromUsbCamera } = require('./module-common.js');
-const V4l2Monitor = require('./module-v4l2-detection.js');
+const { JpegsFromUsbCamera } = require('./module-transcode.js');
+const V4l2Monitor = require('./module-v4l2Monitor.js');
 const AdvertiseBox = require('./module-advertise.js');
 
 module.exports = class UsbCameraSource
@@ -13,10 +13,15 @@ module.exports = class UsbCameraSource
 	constructor( env ) 
 	{
 		this.sourceName = UsbCameraSource.name;
-		this.feed = env.get('feed');
+		this.feedImage = env.get('feedImage');
+		this.feedPCM = env.get('feedPCM');
 		this.config = env.get('configs').get('source.' + this.sourceName);
 		this.advConfig = env.get('configs').get('advertise');
-		this.advBox = new AdvertiseBox( this.advConfig, this.feedAdvertise.bind(this));
+		this.advBox = new AdvertiseBox( 
+			this.advConfig, 
+			this.feedAdvertiseImage.bind(this),
+			this.feedAdvertisePCM.bind(this)
+		);
 		this.advBox.ownerName = this.sourceName;
 
 		this.size = this.config.size;
@@ -187,18 +192,27 @@ module.exports = class UsbCameraSource
 
 	}
 
-	feedAdvertise( jpeg ) 
+	feedAdvertiseImage( jpeg ) 
 	{
 		if ( this.isRunning ) {
 			return;
 		}
 
-		this.active && this.feed( jpeg );
+		this.active && this.feedImage( jpeg );
+	}
+
+	feedAdvertisePCM ( chunk ) 
+	{
+		if ( this.isRunning ) {
+			return;
+		}
+
+		this.active && this.feedPCM( chunk );
 	}
 
 	feedProxy( jpeg ) 
 	{
-		this.active && this.feed( jpeg );
+		this.active && this.feedImage( jpeg );
 	}
 
 	pause ()

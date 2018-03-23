@@ -28,6 +28,68 @@ maintain()
 	[ "$1" = "update" ] && git_update_exit $2
 	[ "$1" = "webcam" ] && mjpg_stream_exit $2
 	[ "$1" = "buildjs" ] && buildjs_exit $2
+	[ "$1" = "livemp3" ] && livemp3_exit $2 $3
+	[ "$1" = "livemp4" ] && livemp4_exit $2 $3
+	[ "$1" = "livemp4audio" ] && livemp4audio_exit $2 $3
+	[ "$1" = "livemp4video" ] && livemp4video_exit $2 $3
+}
+
+livemp3_exit()
+{
+	local_mp3=$1
+	local_port=$2
+
+	if [ "$local_port" = "" ]; then
+		local_port="8080"
+	fi
+
+	if [ "$local_mp3" = "" ]; then
+		local_mp3="$THIS_DIR/public/media/mp3/clapping.mp3"
+	fi
+
+	ffmpeg -y -re -i "$local_mp3"   \
+		-rtbufsize 64 -probesize 64 \
+		-acodec libmp3lame -ab 320k -ac 2 -f mp3 \
+		-fflags +nobuffer - | \
+	curl --include --no-buffer \
+		--header "Connection: Upgrade" \
+		--header "Upgrade: websocket" \
+		--header "Host: localhost:$local_port" \
+		--header "Origin: https://localhost:$local_port/stream/seed.mp3" \
+		--header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
+		--header "Sec-WebSocket-Version: 13" \
+		--header 'Content-Type: audio/mpeg3' \
+		--request GET \
+		--data-binary @- \
+		http://localhost:$local_port/stream/seed.mp3
+	exit 0
+}
+
+post_data()
+{
+	curl --request POST --include \
+		--header 'Content-Type: audio/mpeg3' \
+		--data-binary @- \
+		--no-buffer \
+		http://localhost:$local_port/stream/seed.mp3
+}
+
+livemp4_exit()
+{
+
+	exit 0
+}
+
+livemp4audio_exit()
+{
+
+	exit 0
+}
+
+livemp4video_exit()
+{
+
+	exit 0
 }
 
 buildjs_exit()

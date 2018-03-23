@@ -2,7 +2,7 @@
 const resolve = require('path').resolve;
 const dir = require('node-dir');
 
-const {LocalToLiveRtmp} = require('./module-common.js');
+const {LocalToLiveRtmp} = require('./module-transcode.js');
 const allConfigs = require('config');
 
 class LocalMp4Source

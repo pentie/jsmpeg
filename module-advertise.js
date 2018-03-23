@@ -1,14 +1,14 @@
 
-const resolve = require('path').resolve;
-const dir = require('node-dir');
-const {JpegsFromMp4File} = require('./module-common.js');
+const {genPlaylist} = require('./module-common.js');
+const {JpegsPcmFromFile} = require('./module-transcode.js');
 
 module.exports = class AdvertiseBox
 {
-	constructor( config, feedCallback ) 
+	constructor( config, imageCallback, pcmCallback ) 
 	{
 		this.config = config;
-		this.feedCallback = feedCallback;
+		this.imageCallback = imageCallback;
+		this.pcmCallback = pcmCallback;
 		this.size = this.config.size;
 		this.active = false;
 		this.onlineList = {};
@@ -24,7 +24,9 @@ module.exports = class AdvertiseBox
 			loop: this.nowLoop
 		};
 
-		this.getNewPlaylist( [], this.nowOrder);
+		genPlaylist( this.config.src, [], this.nowOrder, ollist=>{
+			this.onlineList	= ollist;
+		});
 	}
 
 	start( cmdObj, callback )
@@ -38,14 +40,14 @@ module.exports = class AdvertiseBox
 		}
 
 		if (this.file2Play.length === 0) {
-			this.getNewPlaylist( cmdObj.disableList, cmdObj.order, (list)=>{
+			genPlaylist( this.config.src, cmdObj.disableList, cmdObj.order, list => {
 				this.file2Play = list;
-				setImmediate( ()=>{
+				setImmediate( ()=> {
 					cmdObj.internalCall = true;
 					this.active && this.start( cmdObj );
 				});
 			});
-
+			
 			this.disableList = cmdObj.disableList;
 			this.nowLoop = cmdObj.loop;
 			this.nowOrder = cmdObj.order;
@@ -68,100 +70,29 @@ module.exports = class AdvertiseBox
 		} while(false);
 
 		console.log(this.ownerName + ' advertise: ', mp4File);
-		this.source = new JpegsFromMp4File( this.config,mp4File,this.feedProxy.bind(this), ()=>{
-			if ( ! this.active ) {
-				return;
-			}
-			setImmediate( ()=>{
-				cmdObj.internalCall = true;
-				this.active && this.start( cmdObj );
-			});
+
+		this.source = new JpegsPcmFromFile( this.config, mp4File, 
+			this.feedImageProxy.bind(this),
+			this.feedPcmProxy.bind(this),
+			()=>{
+				if ( ! this.active ) {
+					return;
+				}
+				setImmediate( ()=>{
+					cmdObj.internalCall = true;
+					this.active && this.start( cmdObj );
+				});
 		}).start( callback );
 	}
 
-	getNewPlaylist( disableList, order, callback ) 
+	feedImageProxy( jpeg ) 
 	{
-		this.updateOnlineList( this.config.src, order, (onlineList)=>{
-			let newList = [];
-			for (var path in onlineList) {
-				if (disableList.indexOf(path) === -1) {
-					newList = newList.concat( onlineList[path] );
-				}
-			}
-			this.reOrderArray( newList, order );
-			callback && callback( newList );
-		});
+		this.active && this.imageCallback( jpeg );
 	}
 
-	updateOnlineList( mp4Paths, order, callback ) 
+	feedPcmProxy( chunk ) 
 	{
-		let reOrderArray = this.reOrderArray;
-		let pathKeys = [];
-		let counter = 0;
-		mp4Paths.forEach(( mp4Path)=> {
-			pathKeys.push( resolve( mp4Path ));
-			counter++;
-			dir.subdirs(mp4Path, (err, subdirs)=> {
-				counter--;
-				if (err) {
-					console.log('updateOnlineList error', err);
-					return;
-				}
-				subdirs.forEach( (path)=>{
-					pathKeys.push( resolve(path) );
-				});	
-
-				if (counter === 0) {
-					this.onlineList = getPathsFiles( pathKeys );
-					callback( this.onlineList );
-				}
-			});
-		});
-
-		function getPathsFiles( paths ) {
-			var newList = {};
-			paths.forEach( function(path) {
-				let subfiles = getFiles( path, order);
-				if (subfiles.length) {
-					newList[ path] = subfiles;
-				}
-			})
-			return newList;
-		}
-		
-		function getFiles( mp4Path, order ) 
-		{
-			let mp4Files = dir.files( mp4Path, {sync:true, recursive:false});
-
-			mp4Files = mp4Files.filter(function(fileName) {
-				return /mp4$/.test(fileName);
-			});
-			
-			return reOrderArray( mp4Files, order );
-		}
-	}
-
-	reOrderArray( list, order) 
-	{
-		function shuffleArray (array){
-			for (var i = array.length - 1; i > 0; i--) {
-				var rand = Math.floor(Math.random() * (i + 1));
-				[array[i], array[rand]]=[array[rand], array[i]];
-			}
-		}
-
-		switch (order) {
-		    case 'asc': list.sort(); break;
-		    case 'desc': list.reverse(); break;
-		    case 'random': shuffleArray( list); break;
-		    default: list.sort();
-		}
-		return list;
-	}
-
-	feedProxy( jpeg ) 
-	{
-		this.active && this.feedCallback( jpeg );
+		this.active && this.pcmCallback( chunk );
 	}
 
 	pause ()
