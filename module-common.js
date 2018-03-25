@@ -2,7 +2,50 @@ const resolve = require('path').resolve;
 const fs = require('fs');
 const dir = require('node-dir');
 const path = require('path');
+const { URL } = require('url');
 const FileOnWrite = require('file-on-write');
+
+
+function getMediaUrls( srcUrl )
+{
+	let mediaUrls = srcUrl.split('|').map(e=>e.trim()).filter(e=>e!='');
+
+	if ( mediaUrls.length === 0 ) {
+		return null;
+	}
+
+	let videoUrl = mediaUrls[0];
+	let urlObj =  new URL( videoUrl );
+
+	let result = {
+		oriUrl: srcUrl,
+		videoUrl: videoUrl,
+		audioUrl: null,
+		hostname: urlObj.hostname,
+		port: parseInt(urlObj.port | '80')
+	};
+
+	if ( mediaUrls.length >= 2 ) {
+	    let audioUrl = mediaUrls[1];
+	    if (audioUrl.search(/^http:/) >= 0) {
+		result.audioUrl = audioUrl;
+	    } else {
+		if (audioUrl.charAt(0) === '/' ) {
+			urlObj.pathname = audioUrl;
+		} else {
+			let pathname = urlObj.pathname;
+			let paths = pathname.split('/');
+			paths.pop();
+			paths.push(audioUrl);
+			urlObj.pathname = paths.join('/');
+		}
+		result.audioUrl = urlObj.href;
+	    }
+	}
+
+	return result;
+}
+
 
 function reOrderArray( list, order) 
 {
@@ -128,6 +171,7 @@ function writeBinFile( chunk )
 
 
 module.exports = {
+	getMediaUrls,
 	writeBinFile,
 	genPlaylist
 };

@@ -96,7 +96,8 @@ class DevQueryClass
 	}
 }
 
-module.exports =class V4l2Monitor extends DevQueryClass {
+module.exports =class V4l2Monitor extends DevQueryClass 
+{
 	constructor() 
 	{
 		super();

@@ -11,7 +11,8 @@
 
 		webCamera: {
 			caption: 'Video from webcamera',
-			inputOptions: ['-timeout 2800'],
+			//inputOptions: ['-timeout 2800'],
+			//inputAudioOptions: ['-timeout 2800'],
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 
@@ -21,20 +22,24 @@
 			//the amount of time to wait until port is available, for camera url
 			timeOutMs: 500, 
 
-			//the seconds between 2 discovery action, but each discovery will takes 3000ms.
-			//so if onvifInterval=1000, means every 4000ms will start new scanning. 
-			onvifInterval: 1000, 
-
-			//authentication for onvif devices
-			//user: 'testuser',
-			//pass: '123456',
-
-			//always switch to play the newest camera.	
-			alwaysNewest: true,
-
 			//define the constant ip address cameras
-			src: []
-			//src: [ 'http://192.168.2.73:8080/videofeed' ]
+			//src: [],
+			src: [ 'http://192.168.2.73:8080/videofeed | /audio.wav' ],
+
+			onvif: {
+				enable: false,
+
+				//seconds between 2 discovery action, each discovery will takes 3000ms.
+				//so if onvifInterval=1000, means every 4000ms will start new scanning. 
+				onvifInterval: 1000, 
+
+				//authentication for onvif devices
+				//user: 'testuser',
+				//pass: '123456',
+
+				//always switch to play the newest camera.	
+				alwaysNewest: true,
+			},
 		},
 
 		localMp4: {
@@ -62,7 +67,7 @@
 	},
 
 	centerNodes: [{
-		active: true,
+		active: false,
 		port: 8080,
 		allowSources: ['localMp4'],
 		defaultSource: 'localMp4',
@@ -72,10 +77,10 @@
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 	},{
-		active: false,
+		active: true,
 		port: 8081,
-		allowSources: ['usbCamera', 'localMp4'],
-		defaultSource: 'usbCamera',
+		allowSources: ['webCamera'],
+		defaultSource: 'webCamera',
 		defaultSourceIndex: 0,
 		mpeg1Qscale: 12,
 		mpeg1MaxUser: 20,
