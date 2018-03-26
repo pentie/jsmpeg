@@ -5,6 +5,7 @@ const AdvertiseBox = require('./module-advertise.js');
 const ScanOnvif = require('./module-onvif.js');
 const tcpPortUsed = require('tcp-port-used');
 const url = require('url');
+const waterfall = require('async/waterfall');
 
 module.exports = class WebCameraSource
 {
@@ -36,6 +37,7 @@ module.exports = class WebCameraSource
 		this.active = false;
 		this.isRunning = false;
 		this.onvifTimerId = null;
+		this.feedTickTime = -1;
 		
 		if (this.config.autoStart === true) {
 			this.start();
@@ -44,7 +46,7 @@ module.exports = class WebCameraSource
 		this.advBoxSupervisor();
 	}
 
-	waitAvailableWebcam( cmdObj, callback )
+	waitAvailableWebcamSrc( cmdObj, callback )
 	{
 		if ( ! this.active) {
 			console.log('drop the waitting for webcam');
@@ -66,7 +68,7 @@ module.exports = class WebCameraSource
 				! this.advBox.active && this.advBox.start();
 
 				setTimeout(()=> {
-					this.waitAvailableWebcam( null, callback );
+					this.waitAvailableWebcamSrc( null, callback );
 				}, this.onvifBox.onvifInterval);
 			} else {
 				console.log(`get active camera: ${cmdObj.url}.`);
@@ -83,7 +85,7 @@ module.exports = class WebCameraSource
 
 		if (cmdObj.url === 'activeDiscovery') {
 			process.nextTick(()=> {
-				this.waitAvailableWebcam( null, callback );
+				this.waitAvailableWebcamSrc( null, callback );
 			});
 			return;
 		}
@@ -116,45 +118,44 @@ module.exports = class WebCameraSource
 		}, 10);
 	}
 
-	start( cmdObj, callback )
+	start( cmdObj, done ) 
 	{
 		this.onvifBox.startOnvif();
-
 		this.active = true;
-		this.waitSourceNotRunning( 3000, (useTimeMs) => {
-			if (useTimeMs === -1) {
-				console.log( 'Please run stop first, Too fast');
-				return;
-			}
 
-			if (useTimeMs > 0) {
-				console.log( 'Wait '+ useTimeMs + ' ms to start');
-			}
+		waterfall([ callback => {
+			this.waitSourceNotRunning( 3000, useTimeMs=> {
+				if (useTimeMs === -1) {
+					return callback('Please run stop first, Too fast');
+				}
 
-			this.waitAvailableWebcam( cmdObj, (mjpgUrl)=> {
-				let urlObj = getMediaUrls( mjpgUrl );
+				if (useTimeMs > 0) {
+					console.log( 'Wait '+ useTimeMs + ' ms to start');
+				}
 
-				this.source = new JpegsPcmFromWeb( this.config, urlObj,
-					this.feedProxyImage.bind(this),
-					this.feedProxyPCM.bind(this),
-				//endCallback
-				(stdout, stderr) => {
-					this.isRunning = false;
-					this.source && this.source.stop();
-					this.active && this.waitWebcamBackAgain( urlObj );
+				callback(null, cmdObj);
+			});
+		},
 
-					console.debug( stdout, stderr );
-				},
-				//errCallback
-				(err, stdout, stderr) => {
-					this.isRunning = false;
-					this.source && this.source.stop();
-					this.active && this.waitWebcamBackAgain( urlObj );
+		(cmdObj, callback) => {
+			this.waitAvailableWebcamSrc( cmdObj, (srcUrl)=> {
+				let urlObj = getMediaUrls( srcUrl );
+				callback( null, urlObj );
+			});
+		},
 
-					console.debug( stdout, stderr );
-
-					if ( ! err) {return;}
-
+		(urlObj, callback) => {
+			this.source = new JpegsPcmFromWeb( this.config, urlObj,
+				this.feedProxyImage.bind(this),
+				this.feedProxyPCM.bind(this),
+			//endCallback
+			(stdout, stderr) => {
+				console.debug( 'JpegsPcmFromWeb end: ' , stderr );
+				callback( null, urlObj );
+			},
+			//errCallback
+			(err, stdout, stderr) => {
+				if ( err) {
 					let errStr = err.toString();
 					if (errStr.indexOf('Connection refused') >= 0) {
 						console.log('ffmpeg lost the camera');
@@ -164,17 +165,36 @@ module.exports = class WebCameraSource
 					} else {
 						console.log( err );
 					}
-				});
-
-				this.source.start( (cmdline )=>{
-					console.log(cmdline);
-
-					this.isRunning = true;
-					this.urgencyUrl = null;
-					this.advBox.stop();
-					callback && callback( cmdline ); 
-				});
+				}
+				console.debug( 'JpegsPcmFromWeb err' );
+				callback( null, urlObj );
 			});
+
+			this.source.start( (cmdline )=>{
+				console.log( 'JpegsPcmFromWeb: ' + cmdline);
+				this.feedTickTime = Date.now();
+				this.isRunning = true;
+				this.urgencyUrl = null;
+				this.advBox.stop();
+				done && done( cmdline ); 
+			});
+		},
+
+		(urlObj, callback) => {
+			this.isRunning = false;
+			this.source && this.source.stop();
+
+			if (this.active) {
+				this.waitWebcamBackAgain( urlObj );
+			} else {
+				callback('source is inactive, neednt wait for webcam');
+			}
+		}
+
+		], (err, result) => {
+			if (err) {
+				console.log(err);
+			}
 		});
 	}
 
@@ -183,7 +203,7 @@ module.exports = class WebCameraSource
 		!this.advBox.active && this.advBox.start();
 
 		tcpPortUsed.waitUntilUsedOnHost( 
-			parseInt(urlObj.port), urlObj.hostname, 
+			urlObj.port, urlObj.hostname, 
 			this.config.retryTimeMs, 
 			this.config.timeOutMs )
 		.then( ()=> {
@@ -227,9 +247,41 @@ module.exports = class WebCameraSource
 		});
 	}
 
+	advBoxSupervisor()
+	{
+		console.log( this.sourceName, 'start advBox Supervisor');
+		let actionTime = Date.now();
+		let actionReport = false;
+
+		if (this.advBoxTimeInterval) {
+			clearInterval( this.advBoxTimeInterval );
+		}
+
+		this.advBoxTimeInterval = setInterval(()=>{
+			if ( Date.now() - this.feedTickTime > 2000 ) {
+				if (Date.now() - actionTime > 3000 ) {
+					this.source && this.source.stop();
+					actionTime = Date.now();
+					if ( actionReport === false ) { 
+						console.log('force stop source');
+						actionReport = true;
+					}
+				}
+			} else {
+				actionReport = false;
+			}
+
+			if ( this.advBox.active ) {
+				if ( Date.now() - this.feedTickTime < 1000 ) {
+					this.advBox.stop();
+				}
+			}
+		}, 1000);
+	}
+
 	feedAdvertiseImage( jpeg ) 
 	{
-		if ( this.isRunning ) {
+		if ( Date.now() - this.feedTickTime < 1000 ) {
 			return;
 		}
 
@@ -238,7 +290,7 @@ module.exports = class WebCameraSource
 
 	feedAdvertisePCM ( chunk ) 
 	{
-		if ( this.isRunning ) {
+		if ( Date.now() - this.feedTickTime < 1000 ) {
 			return;
 		}
 
@@ -247,6 +299,7 @@ module.exports = class WebCameraSource
 
 	feedProxyImage( jpeg ) 
 	{
+		this.feedTickTime = Date.now();
 		this.active && this.feedImage( jpeg );
 	}
 
@@ -273,35 +326,6 @@ module.exports = class WebCameraSource
 		this.source && this.source.stop();
 	}
 
-	advBoxSupervisor()
-	{
-		console.log( this.sourceName, 'start advBox Supervisor');
-		this.advErrorCounter = 0;
-
-		if (this.advBoxTimeInterval) {
-			clearInterval( this.advBoxTimeInterval );
-		}
-
-		this.advBoxTimeInterval = setInterval(()=>{
-			if ( ! this.advBox.active ) {
-				this.advErrorCounter = 0;
-				return;
-			}
-			if ( ! this.isRunning ) {
-				this.advErrorCounter = 0;
-				return;
-			}
-
-			this.advErrorCounter++;
-
-			if ( this.advErrorCounter >= 3 ) {
-				console.log( this.sourceName, 'force stop advBox');
-				this.advBox.stop();
-			}
-			this.advErrorCounter = 0;
-		}, 1000);
-	}
-
 	list() 
 	{
 		return {
@@ -313,5 +337,68 @@ module.exports = class WebCameraSource
 	}
 
 };
+
+
+	function __start( cmdObj, callback )
+	{
+		this.onvifBox.startOnvif();
+
+		this.active = true;
+		this.waitSourceNotRunning( 3000, (useTimeMs) => {
+			if (useTimeMs === -1) {
+				console.log( 'Please run stop first, Too fast');
+				return;
+			}
+
+			if (useTimeMs > 0) {
+				console.log( 'Wait '+ useTimeMs + ' ms to start');
+			}
+
+			this.waitAvailableWebcamSrc( cmdObj, (srcUrl)=> {
+				let urlObj = getMediaUrls( srcUrl );
+
+				this.source = new JpegsPcmFromWeb( this.config, urlObj,
+					this.feedProxyImage.bind(this),
+					this.feedProxyPCM.bind(this),
+				//endCallback
+				(stdout, stderr) => {
+					this.isRunning = false;
+					this.source && this.source.stop();
+					this.active && this.waitWebcamBackAgain( urlObj );
+
+					console.debug( 'JpegsPcmFromWeb end: ' , stderr );
+				},
+				//errCallback
+				(err, stdout, stderr) => {
+					this.isRunning = false;
+					this.source && this.source.stop();
+					this.active && this.waitWebcamBackAgain( urlObj );
+
+					console.debug( 'JpegsPcmFromWeb err: ' , stderr );
+
+					if ( ! err) {return;}
+
+					let errStr = err.toString();
+					if (errStr.indexOf('Connection refused') >= 0) {
+						console.log('ffmpeg lost the camera');
+					}else 
+					if (errStr.indexOf('SIGKILL') >= 0) {
+						console.log('ffmpeg was killed');
+					} else {
+						console.log( err );
+					}
+				});
+
+				this.source.start( (cmdline )=>{
+					console.log( 'JpegsPcmFromWeb: ' + cmdline);
+
+					this.isRunning = true;
+					this.urgencyUrl = null;
+					this.advBox.stop();
+					callback && callback( cmdline ); 
+				});
+			});
+		});
+	}
 
 

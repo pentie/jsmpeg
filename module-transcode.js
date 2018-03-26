@@ -68,6 +68,7 @@ class ChunksFromFFmpegBase
 
 	onFFmepgEnd () {
 		console.log( this.constructor.name, ': ffmpeg processing finished !');
+		this.command = null;
 	}
 
 	onError (err) {
@@ -75,6 +76,7 @@ class ChunksFromFFmpegBase
 		if (this.constructor.name === 'JpegsFromMp4File') {
 			console.log(this.mp4File);
 		}
+		this.command = null;
 	}
 
 	stop() {
@@ -120,9 +122,9 @@ class PcmListener extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
 		setTimeout( ()=>{
-			fs.unlink( this.loopFile );
+			fs.unlinkSync( this.loopFile );
 		}, 1000);
 	}
 }
@@ -144,19 +146,26 @@ class JpegsPcmFromWeb
 
 	start( callback ) 
 	{
-		console.log(this.videoUrl);
-		console.log(this.audioUrl);
-
 		this.videoCmd = new JpegsFromWebCamera(this.config, this.videoUrl, 
-			this.mjpegCallback, this.endCallback, this.errCallback);
+			this.mjpegCallback, 
+			()=>{
+				this.endCallback();
+				this.videoCmd.command=null;
+			},
+			(err)=>{
+				this.errCallback(err);
+				this.videoCmd.command=null;
+			}
+		);
 		this.videoCmd.start( callback );
 
 		if ( this.audioUrl ) {
 			this.audioCmd = new PcmFromWeb( this.config, this.audioUrl, 
-				this.pcmCallback, 
-				this.onFFmepgEnd, 
-				this.onError );
-			this.audioCmd.start( this.onFFmpegStart.bind(this.audioCmd) );
+				this.pcmCallback,
+				()=>{this.audioCmd.command=null},
+				(err)=>{this.audioCmd.command=null}
+			);
+			this.audioCmd.start(this.onFFmpegStart.bind(this.audioCmd));
 		}
 	}
 
@@ -276,7 +285,7 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
 		if (this.pcmListen) {
 			this.pcmListen.stop();
 		}
@@ -321,9 +330,9 @@ class Mp3Listener extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
 		setTimeout( ()=>{
-			fs.unlink( this.loopFile );
+			fs.unlinkSync( this.loopFile );
 		}, 1000);
 	}
 }
@@ -385,7 +394,7 @@ class JpegsMp3FromFile extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
 		if (this.mp3Listen) {
 			this.mp3Listen.stop();
 		}

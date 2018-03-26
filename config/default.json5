@@ -11,8 +11,8 @@
 
 		webCamera: {
 			caption: 'Video from webcamera',
-			//inputOptions: ['-timeout 2800'],
-			//inputAudioOptions: ['-timeout 2800'],
+			//inputOptions: ['-timeout 3800'],
+			//inputAudioOptions: ['-timeout 3800'],
 			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
 			size: '1280x720',
 

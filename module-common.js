@@ -22,7 +22,7 @@ function getMediaUrls( srcUrl )
 		videoUrl: videoUrl,
 		audioUrl: null,
 		hostname: urlObj.hostname,
-		port: parseInt(urlObj.port | '80')
+		port: parseInt(urlObj.port || '80')
 	};
 
 	if ( mediaUrls.length >= 2 ) {
