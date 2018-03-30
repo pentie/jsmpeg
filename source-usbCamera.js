@@ -168,16 +168,17 @@ module.exports = class UsbCameraSource
 					console.debug(stderr);
 					this.isRunning = false;
 					this.active && !this.advBox.active && this.advBox.start();
-					if (err) {
-						let errStr = err.toString();
-						if (errStr.indexOf('SIGKILL') >= 0) {
-							console.log('ffmpeg was killed');
-						} else
-						if (errStr.indexOf('No such file or directory') >= 0) {
-							console.log('ffmpeg not found: ' + cmdObj.devPath);
-						} else {
-							console.log( err );
-						}
+
+					if ( ! err ) {return}
+
+					let errStr = err.toString();
+					if (errStr.indexOf('SIGKILL') >= 0) {
+						console.log('ffmpeg was killed');
+					} else
+					if (errStr.indexOf('No such file or directory') >= 0) {
+						console.log('ffmpeg not found: ' + cmdObj.devPath);
+					} else {
+						console.log( err );
 					}
 				});
 

@@ -68,6 +68,7 @@ class ChunksFromFFmpegBase
 
 	onFFmepgEnd () {
 		console.log( this.constructor.name, ': ffmpeg processing finished !');
+		this.command = null;
 	}
 
 	onError (err) {
@@ -75,6 +76,7 @@ class ChunksFromFFmpegBase
 		if (this.constructor.name === 'JpegsFromMp4File') {
 			console.log(this.mp4File);
 		}
+		this.command = null;
 	}
 
 	stop() {
@@ -120,10 +122,69 @@ class PcmListener extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
 		setTimeout( ()=>{
-			fs.unlink( this.loopFile );
+			fs.unlinkSync( this.loopFile );
 		}, 1000);
+	}
+}
+
+class JpegsPcmFromWeb
+{
+	constructor( config, urlObj, mjpegCallback, pcmCallback, endCallback, errCallback ) 
+	{
+		this.config = config;
+		this.oriUrl = urlObj.oriUrl;
+		this.videoUrl = urlObj.videoUrl;
+		this.audioUrl = urlObj.audioUrl;
+		this.mjpegCallback = mjpegCallback;
+		this.pcmCallback = pcmCallback;
+
+		this.endCallback = endCallback || this.onFFmepgEnd;
+		this.errCallback = errCallback || this.onError;
+	}
+
+	start( callback ) 
+	{
+		this.videoCmd = new JpegsFromWebCamera(this.config, this.videoUrl, 
+			this.mjpegCallback, 
+			()=>{
+				this.endCallback();
+				this.videoCmd.command=null;
+			},
+			(err)=>{
+				this.errCallback(err);
+				this.videoCmd.command=null;
+			}
+		);
+		this.videoCmd.start( callback );
+
+		if ( this.audioUrl ) {
+			this.audioCmd = new PcmFromWeb( this.config, this.audioUrl, 
+				this.pcmCallback,
+				()=>{this.audioCmd.command=null},
+				(err)=>{this.audioCmd.command=null}
+			);
+			this.audioCmd.start(this.onFFmpegStart.bind(this.audioCmd));
+		}
+	}
+
+	stop() 
+	{
+		this.videoCmd && this.videoCmd.stop();
+		this.audioCmd && this.audioCmd.stop();
+	}
+
+	onFFmpegStart( cmdline ) {
+		console.log( this.constructor.name, cmdline);
+	}
+
+	onFFmepgEnd () {
+		console.log( this.constructor.name, ': ffmpeg processing finished !');
+	}
+
+	onError (err) {
+		console.log( this.constructor.name, 'error occurred: ' + err.message);
 	}
 }
 
@@ -193,7 +254,8 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 
 			if ( hasAudio ) {
 				if ( outputIsUsed ) {
-					this.pcmListen = new PcmListener(this.config, this.pcmCallback, this.endCallback);
+					this.pcmListen = new PcmListener(this.config, this.pcmCallback, 
+						this.onFFmepgEnd);
 					let loopfifo = this.pcmListen.start();
 					this.command.output( loopfifo );
 				} else {
@@ -223,12 +285,10 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
-		setTimeout( ()=>{
-			if (this.pcmListen) {
-				this.pcmListen.stop();
-			}
-		}, 1000);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
+		if (this.pcmListen) {
+			this.pcmListen.stop();
+		}
 	}
 }
 
@@ -270,9 +330,9 @@ class Mp3Listener extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
 		setTimeout( ()=>{
-			fs.unlink( this.loopFile );
+			fs.unlinkSync( this.loopFile );
 		}, 1000);
 	}
 }
@@ -290,7 +350,7 @@ class JpegsMp3FromFile extends ChunksFromFFmpegBase
 
 	start( callback ) 
 	{
-		this.mp3Listen = new Mp3Listener(this.config, this.mp3Callback, this.endCallback);
+		this.mp3Listen = new Mp3Listener(this.config, this.mp3Callback, this.onFFmepgEnd);
 		let loopfifo = this.mp3Listen.start();
 
 		let inputOptions = this.config.inputOptions || [];
@@ -334,12 +394,10 @@ class JpegsMp3FromFile extends ChunksFromFFmpegBase
 	}
 
 	stop() {
-		ChunksFromFFmpegBase.stop.call(this);
-		setTimeout( ()=>{
-			if (this.mp3Listen) {
-				this.mp3Listen.stop();
-			}
-		}, 1000);
+		ChunksFromFFmpegBase.prototype.stop.call(this);
+		if (this.mp3Listen) {
+			this.mp3Listen.stop();
+		}
 	}
 }
 
@@ -381,21 +439,57 @@ class Mp3FromFile extends ChunksFromFFmpegBase
 
 }
 
-class PcmFromFile extends ChunksFromFFmpegBase
+class PcmFromWeb extends ChunksFromFFmpegBase
 {
-	constructor( config, inputMedia, chunksCallback, endCallback ) 
+	constructor( config, inputMedia, chunksCallback, endCallback, errCallback ) 
 	{
 		super(config, chunksCallback);
 		this.inputMedia = inputMedia;
 		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
-		this.errCallback = endCallback || this.onError.bind(this) ;
+		this.errCallback = errCallback || this.onError.bind(this) ;
 	}
 
 	start( callback ) 
 	{
 		callback = callback || this.onFFmpegStart.bind(this);
-		let inputOptions = this.config.inputOptions? this.config.inputOptions : [];
-		let outputOptions = this.config.outputOptions? this.config.outputOptions : [ 
+		let inputOptions = this.config.inputAudioOptions? this.config.inputAudioOptions: [];
+		let outputOptions = this.config.outputAudioOptions? this.config.outputAudioOptions : [ 
+			'-f s16le',
+			'-acodec pcm_s16le',
+			'-ar 44100', '-ac 2', 
+			'-fflags nobuffer'
+		];
+
+		this.command = ffmpeg()
+			.input( this.inputMedia)
+			.inputOptions( inputOptions )
+			.output( this.output )
+			.outputOptions( outputOptions )
+			.on('start', callback)
+			.on('error', this.errCallback)
+			.on('end', this.endCallback);
+
+		this.command.run();
+		return this;
+	}
+
+}
+
+class PcmFromFile extends ChunksFromFFmpegBase
+{
+	constructor( config, inputMedia, chunksCallback, endCallback, errCallback ) 
+	{
+		super(config, chunksCallback);
+		this.inputMedia = inputMedia;
+		this.endCallback = endCallback || this.onFFmepgEnd.bind(this) ;
+		this.errCallback = errCallback || this.onError.bind(this) ;
+	}
+
+	start( callback ) 
+	{
+		callback = callback || this.onFFmpegStart.bind(this);
+		let inputOptions = this.config.inputAudioOptions? this.config.inputAudioOptions: [];
+		let outputOptions = this.config.outputAudioOptions? this.config.outputAudioOptions : [ 
 			'-map 0:a',
 			'-f s16le',
 			'-acodec pcm_s16le',
@@ -697,5 +791,6 @@ module.exports = {
 	JpegsToLiveRtmp, LocalToLiveRtmp,
 	JpegsFromWebCamera, JpegsFromUsbCamera, JpegsFromMp4File,
 	Mp3FromFile, JpegsMp3FromFile,
-	PcmFromFile, JpegsPcmFromFile
+	PcmFromFile, PcmFromWeb, JpegsPcmFromFile,
+	JpegsPcmFromWeb
 };
