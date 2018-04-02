@@ -55,23 +55,16 @@ var intwsurl = "";
 			setInfo("内网直播链接中...");
 			$.cachedScript(intbase + 'jsmpeg.js')
 			.done(function() {
-					JSMpeg.config.echoConnTimeout = 2000;
-					JSMpeg.config.reconnectInterval = 3000;
-					JSMpeg.config.mjpegFrameInterval = 200;
-					JSMpeg.config.mjpegTimeQueLength= 5;
-					JSMpeg.config.mpeg1TimeQueLength= 5;
-					JSMpeg.setModeSwitch(3000, 60, function(mode){
-						$(document).trigger('jsmpeg_modeswitch', mode);
-					});
-					JSMpeg.onHeartbeatReport = function( reports ) {
-						$(document).trigger('jsmpeg_reports', reports);
-					};
-					JSMpeg.onSourceConnected = function( source ) { 
-						$(document).trigger('jsmpeg_connected', source);
-					};
-					JSMpeg.CreateSingleVideo(document.querySelector("#jsmpeg"), intwsurl, "1280x720");
-				}
-			);
+				JSMpeg.Init(
+					document.querySelector("#jsmpeg"), intwsurl,
+					{
+						mjpegFrameInterval:200,
+						mjpegTimeQueLength: 5,
+						mpeg1TimeQueLength: 5,
+						autoModeSwitch: true,
+					}
+				);
+			});
 		})
 	})();
 
@@ -84,7 +77,8 @@ var intwsurl = "";
 			JSMpeg.switchUpstream(name);
 		});
 
-		$(document).on('jsmpeg_reports', function(evn, reports) {
+		$(document).on('jsmpeg:reports', function(evn) {
+			var reports = evn.detail;
 			var ctl = $("#channel_ctl");
 			var upstreams = reports.nodes[ reports.nodes.length - 1 ].upstreams; 
 			if(upstreams.length != ctl.length ) {
@@ -102,7 +96,8 @@ var intwsurl = "";
 			$("#debug > p.mjpeg").text(JSMpeg.infos.mjpegTime.join(","));
 		});
 
-		$(document).on('jsmpeg_modeswitch', function(evn, mode) {
+		$(document).on('jsmpeg:modeswitch', function(evn) {
+			var mode = evn.detail;
 			var idn = $("#mode_indicator").removeClass("badge-success badge-warning");
 			if(mode === 'mjpeg') {
 				idn.addClass("badge-warning").text("M");
@@ -111,7 +106,7 @@ var intwsurl = "";
 			}
 		});
 
-		$(document).on('jsmpeg_connected', function(evn, source) {
+		$(document).on('jsmpeg:connected', function(evn) {
 			setInfo("Connected");
 		});
 	})
