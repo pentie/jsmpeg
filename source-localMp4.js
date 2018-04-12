@@ -92,7 +92,11 @@ module.exports = class LocalMp4Source
 		this.source = new JpegsPcmFromFile( this.config, mp4File, 
 			this.feedImageProxy.bind(this),
 			this.feedPcmProxy.bind(this),
-			()=>{
+			(err, sout, serr)=>{
+				if(err) {
+					console.log(sout);
+					console.log(serr);
+				}
 				setImmediate( ()=>{
 					cmdObj.internalCall = true;
 					this.active && this.start( cmdObj );
