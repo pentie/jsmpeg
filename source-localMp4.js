@@ -138,4 +138,10 @@ module.exports = class LocalMp4Source
 		this.active = false;
 		this.source && this.source.stop();
 	}
+
+	advBoxToggle() 
+	{ 
+		console.log(this.name, "advBox toggled, no effect on this source.");
+	}
+
 };

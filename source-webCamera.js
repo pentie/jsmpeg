@@ -31,7 +31,7 @@ module.exports = class WebCameraSource
 
 		this.urgencyUrl = null;
 		this.onvifBox = new ScanOnvif( this.onvifConfig, (mjpegUrl)=>{
-			this.urgencyUrl = mjpgUrl;
+			this.urgencyUrl = mjpegUrl;
 		});
 
 		this.active = false;
@@ -336,6 +336,10 @@ module.exports = class WebCameraSource
 		};
 	}
 
+	advBoxToggle()
+	{
+		console.log(this.name, "advBox toggled, no effect on this source.");
+	}
 };
 
 

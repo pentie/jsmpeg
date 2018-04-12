@@ -44,12 +44,12 @@ module.exports = class UsbCameraSource
 		this.monitor.on('remove', this.onCaptureRemove.bind(this));
 
 		this.advBoxSupervisor();
+		this.isForceAdvBox = false;
 	}
 
 	onCaptureInsert( devPath )
 	{
 		console.log( 'camera added:', devPath );
-
 		if (this.config.src.indexOf( devPath ) === -1) {
 			this.config.src.push( devPath );
 		} 
@@ -260,5 +260,22 @@ module.exports = class UsbCameraSource
 			}
 			this.advErrorCounter = 0;
 		}, 1000);
+	}
+
+	advBoxToggle()
+	{
+		console.log(this.name, "advBox toggled")
+		if(this.active) {
+			this.isForceAdvBox = !this.isForceAdvBox
+			if(this.isForceAdvBox) {
+				this.source && this.source.stop();
+				this.advBox.start();
+			} else {
+				this.start( undefined,  (cmdline) => {
+					console.log('toggle resume, playing: ');
+				});
+				this.advBox.stop();
+			}
+		}
 	}
 };
