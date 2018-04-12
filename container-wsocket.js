@@ -46,6 +46,8 @@ module.exports = class WebSocketHub
 		this.env.set('getNodeUrls', this.getLocalUrls.bind(this));
 		this.env.set('defaultUpstream', this.defaultUpstream.bind(this));
 		this.env.set('switchUpstream', this.switchUpstream.bind(this));
+
+		this.env.set('advBoxToggle', this.advBoxToggle.bind(this));
 	}
 
 	getWsHandler( url ) 
@@ -683,4 +685,11 @@ module.exports = class WebSocketHub
 		}
 	}
 
+	advBoxToggle() {
+		this.sources.forEach(function(sourcer) {
+			if (typeof sourcer.advBoxToggle === "function") { 
+				sourcer.advBoxToggle();
+			}
+		});
+	}
 };
