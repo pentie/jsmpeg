@@ -729,12 +729,10 @@ class JpegsToLiveRtmp
 
 class LocalToLiveRtmp
 {
-	constructor( config, inputObj, endCallback ) 
+	constructor( config, endCallback ) 
 	{
 		this.config = config;
 		this.endCallback = endCallback;
-		this.input = inputObj.src;
-		this.inputOptions = inputObj.options;
 	}
 
 	onError( error, stdout, stderr ) 
@@ -759,20 +757,15 @@ class LocalToLiveRtmp
 		startCallback = startCallback || this.onStart.bind(this); 
 
 		this.command = ffmpeg();
-
-		this.command.input( this.input );
-		this.command.inputOptions( this.inputOptions );
-
-		this.config.outputs.forEach( (config) => {
-			if (config.active !== undefined) {
-				if (config.active !== true) {
-					return;
-				}
+		this.config.inputs.forEach((ipt) => {
+			if(ipt.active) {
+				this.command.input( ipt.src );
+				this.command.inputOptions( ipt.options );
 			}
+		})
 
-			this.command.output( config.outputTo );
-			this.command.outputOptions( config.options );
-		});
+		this.command.output( this.config.output.outputTo );
+		this.command.outputOptions( this.config.output.options );
 
 		this.command.on('start', startCallback )
 		this.command.on('error', this.onError.bind(this) );

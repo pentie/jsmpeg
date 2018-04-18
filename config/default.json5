@@ -152,50 +152,35 @@
 		// only one input item should be set to "true"
 		// the inputs below are audio inputs, will merged with main video
 		inputs: [{
-			active: false,
-			name: 'local mic',
-			options: [
-				'-f alsa', 
-				'-ar 8000',
-				'-ac 2',
-			],
-			inputFrom: 'hw:0',
+				active: true,
+				name: 'video',
+				src: 'http://127.0.0.1:8081/stream/seed.mjpeg',
+				options: [ 
+					'-thread_queue_size 64',
+				        '-itsoffset -0',
+					],
 		    },{
-			active: false,
-			name: 'local pulse mic',
-			options: [
-				'-f pulse', 
-				'-ar 8000',
-				'-ac 2',
-			],
-			inputFrom: 'default',
-		    },{
-			active: true,
-			name: 'local mp3',
-			options: [
-				'-f lavfi',
-				'-re'
-			],
-			inputFrom: 'amovie=public/media/mp3/clapping.mp3:loop=0,asetpts=N/SR/TB',
-		}],
+				active: true,
+				name: 'audio',
+				src: 'http://127.0.0.1:8081/stream/seed.wav',
+				options: [ '-thread_queue_size 64' ],
+		    }
+		],
 
-		outputs : [{
-			active: true,
+		output : {
 			name: 'tencent video stream cloud',
 			options: [
 				'-f flv',
-				'-s 640x360',
-				'-r 10',
+				'-s film',
+				'-r 15',
 				'-pix_fmt yuv420p',
 				'-b:v 256k',
 				'-c:v libx264',
-				'-b:a 96k',
+				'-b:a 64k',
 				'-c:a aac',
 			],
-			outputTo: 'rtmp://19924.livepush.myqcloud.com/live/19924_ef69ee3738?bizid=19924&txSecret=99ab4f5003db6fd00b69fba86bf47a06&txTime=5A8C45FF'
-		    },{
-			active: false,
-		}],
+			outputTo: 'rtmp://19924.livepush.myqcloud.com/live/19924_test001?bizid=19924&txSecret=3bef4336479fae4b856351471be64028&txTime=5AE73D7F'
+		},
 	}],
 
 	adminKeys: {
