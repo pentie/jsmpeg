@@ -62,15 +62,44 @@ module.exports = class MJpegHandler
 
 	feedImage( chunk ) 
 	{
+		if ( (Date.now() - this.mjpegPushTime) < 1000 ) {
+			return;
+		}
+
+
+		var _len = chunk.length;
+
+
+		// mjpeg header 
 		if(chunk[0] == 0xff && chunk[1] == 0xd8) {
-			if(this._buf_mjchk) {
-				// found new frame, send last frame
-				this.downstream( this._buf_mjchk );
+
+			// mjpeg tailer 
+			if(chunk[_len - 2] == 0xff && chunk[_len - 1] == 0xd9) {
+				// is complete frame, sent
+				this.downstream( chunk );
+				this._buf_mjchk  = null;
+			} else {
+				// incomplete frame, set in buffer
+				this._buf_mjchk = chunk;
 			}
-			this._buf_mjchk = chunk;
+
 		} else {
+
+			// incomplete chunk, concat buffer
 			if(this._buf_mjchk ) {
 				this._buf_mjchk = Buffer.concat([this._buf_mjchk, chunk])
+
+
+				// current chunk is tailer
+				if(chunk[_len - 2] == 0xff && chunk[_len - 1] == 0xd9) {
+
+					// is complete frame, sent
+					this.downstream( this._buf_mjchk );
+					this._buf_mjchk = null;
+					// console.log("sent concated frame.")
+				}
+			} else {
+				console.log("incomplete frame without concat , droped .")
 			}
 		}
 	}
