@@ -239,7 +239,8 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 				let outputVideoOptions = this.config.outputVideoOptions || [ 
 					// '-map 0:v',
 					'-f mjpeg', 
-					'-c:v mjpeg'
+					'-c:v mjpeg',
+					'-fflags nobuffer',
 				];
 
 				this.command.output( this.output )

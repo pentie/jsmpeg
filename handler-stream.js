@@ -13,6 +13,8 @@ module.exports = class LiveStreamHandler
 		this.nodeId = env.get('nodeId');
 		this.cache = env.get('newCache')();
 
+		this._buf_mjchk = null;
+
 		if (!this.isCenter) {
 			console.log( this.handlerName, ' didn\'t run in center node');
 			return;
@@ -113,7 +115,17 @@ module.exports = class LiveStreamHandler
 			return;
 		}
 
-		this.mjpegLive.feed( chunk );
+		if(chunk[0] == 0xff && chunk[1] == 0xd8) {
+			if(this._buf_mjchk) {
+				// found new frame, send last frame
+				this.mjpegLive.feed( this._buf_mjchk );
+			}
+			this._buf_mjchk = chunk;
+		} else {
+			if(this._buf_mjchk ) {
+				this._buf_mjchk = Buffer.concat([this._buf_mjchk, chunk])
+			}
+		}
 	}
 
 	feedPCM( chunk ) 

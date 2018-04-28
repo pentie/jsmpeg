@@ -13,6 +13,8 @@ module.exports = class MJpegHandler
 		this.upstreamLastTime = Date.now();
 
 		this.interval = this.config.mjpegUpdateInterval? parseInt(this.config.mjpegUpdateInterval) : 100;
+
+		this._buf_mjchk = null;
 	}
 
 	http( req, res )
@@ -60,7 +62,17 @@ module.exports = class MJpegHandler
 
 	feedImage( chunk ) 
 	{
-		this.downstream( chunk );
+		if(chunk[0] == 0xff && chunk[1] == 0xd8) {
+			if(this._buf_mjchk) {
+				// found new frame, send last frame
+				this.downstream( this._buf_mjchk );
+			}
+			this._buf_mjchk = chunk;
+		} else {
+			if(this._buf_mjchk ) {
+				this._buf_mjchk = Buffer.concat([this._buf_mjchk, chunk])
+			}
+		}
 	}
 
 	downstream( chunk, downClients ) 
