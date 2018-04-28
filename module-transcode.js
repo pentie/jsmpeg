@@ -239,8 +239,7 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 				let outputVideoOptions = this.config.outputVideoOptions || [ 
 					// '-map 0:v',
 					'-f mjpeg', 
-					'-c:v mjpeg',
-					'-fflags nobuffer',
+					'-c:v mjpeg'
 				];
 
 				this.command.output( this.output )
@@ -270,7 +269,6 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 					'-c:a pcm_s16le',
 					'-ar 44100', '-ac 2', 
 					'-fflags nobuffer',
-					'-y'
 				];
 
 				this.command.outputOptions( outputAudioOptions );
