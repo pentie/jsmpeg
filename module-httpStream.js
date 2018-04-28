@@ -52,7 +52,7 @@ class HttpMjpegStream extends HttpStreamBase
 		this.initRes( res );
 
 		res.writeHead(200, {
-			'Content-Type': 'multipart/x-mixed-replace;boundary=--MjpegBoundary',
+			'Content-Type': 'multipart/x-mixed-replace;boundary=MjpegBoundary',
 			'Connection': 'keep-alive',
 			'Expires': 'Mon, 01 Jul 1980 00:00:00 GMT',
 			'Cache-Control': 'no-cache, no-store, must-revalidate',
