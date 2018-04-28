@@ -237,7 +237,7 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 					'crop=iw:9/16*iw:0:(ih-oh)/2'
 				];
 				let outputVideoOptions = this.config.outputVideoOptions || [ 
-					// '-map 0:v',
+					'-map 0:V:0',
 					'-f mjpeg', 
 					'-c:v mjpeg'
 				];
@@ -264,7 +264,7 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 				}
 
 				let outputAudioOptions = this.config.outputAudioOptions || [ 
-					'-map 0:a',
+					'-map 0:a:0',
 					'-f s16le',
 					'-c:a pcm_s16le',
 					'-ar 44100', '-ac 2', 
