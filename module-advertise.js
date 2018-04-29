@@ -74,7 +74,10 @@ module.exports = class AdvertiseBox
 		this.source = new JpegsPcmFromFile( this.config, mp4File, 
 			this.feedImageProxy.bind(this),
 			this.feedPcmProxy.bind(this),
-			()=>{
+			(err)=>{
+				if (err) {
+					console.log(err);
+				}
 				if ( ! this.active ) {
 					return;
 				}

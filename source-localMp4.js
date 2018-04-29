@@ -61,6 +61,12 @@ module.exports = class LocalMp4Source
 		if (this.file2Play.length === 0) {
 			genPlaylist( this.config.src, cmdObj.disableList, cmdObj.order, list => {
 				this.file2Play = list;
+
+				if (this.file2Play.length === 0) {
+					console.log('FATAL ERROR. the input source mp4 list is empty.');
+					return;
+				}
+
 				setImmediate( ()=> {
 					cmdObj.internalCall = true;
 					this.active && this.start( cmdObj );
@@ -92,7 +98,10 @@ module.exports = class LocalMp4Source
 		this.source = new JpegsPcmFromFile( this.config, mp4File, 
 			this.feedImageProxy.bind(this),
 			this.feedPcmProxy.bind(this),
-			()=>{
+			(err)=>{
+				if (err) {
+					console.log(err);
+				}
 				setImmediate( ()=>{
 					cmdObj.internalCall = true;
 					this.active && this.start( cmdObj );
