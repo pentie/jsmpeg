@@ -155,7 +155,8 @@ class PcmListener extends ChunksFromFFmpegBase
 
 class JpegsPcmFromWeb
 {
-	constructor( config, urlObj, mjpegCallback, pcmCallback, endCallback, errCallback ) 
+	constructor( config, urlObj, mjpegCallback, pcmCallback,
+		 endCallback, errCallback, pcmEndCallback, pcmErrCallback ) 
 	{
 		this.config = config;
 		this.oriUrl = urlObj.oriUrl;
@@ -166,18 +167,20 @@ class JpegsPcmFromWeb
 
 		this.endCallback = endCallback || this.onFFmepgEnd;
 		this.errCallback = errCallback || this.onError;
+		this.pcmEndCallback = pcmEndCallback || this.onFFmepgEnd;
+		this.pcmErrCallback = pcmErrCallback || this.onError;
 	}
 
 	start( callback ) 
 	{
 		this.videoCmd = new JpegsFromWebCamera(this.config, this.videoUrl, 
 			this.mjpegCallback, 
-			()=>{
-				this.endCallback();
+			(stdout, stderr)=>{
+				this.endCallback(stdout, stderr);
 				this.videoCmd.command=null;
 			},
-			(err)=>{
-				this.errCallback(err);
+			(err, stdout, stderr)=>{
+				this.errCallback(err, stdout, stderr);
 				this.videoCmd.command=null;
 			}
 		);
@@ -186,8 +189,14 @@ class JpegsPcmFromWeb
 		if ( this.audioUrl ) {
 			this.audioCmd = new PcmFromWeb( this.config, this.audioUrl, 
 				this.pcmCallback,
-				()=>{this.audioCmd.command=null},
-				(err)=>{this.audioCmd.command=null}
+				(stdout, stderr)=>{
+					this.pcmEndCallback(stdout, stderr);
+					this.audioCmd.command=null
+				},
+				(err, stdout, stderr)=>{
+					this.pcmErrCallback(err, stdout, stderr);
+					this.audioCmd.command=null
+				}
 			);
 			this.audioCmd.start(this.onFFmpegStart.bind(this.audioCmd));
 		}
