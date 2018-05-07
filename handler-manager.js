@@ -15,6 +15,9 @@ module.exports = class ManagerHandler
 		this.handlerInfos = env.get('handlerInfos');
 		this.sourcerInfos = env.get('sourcerInfos');
 		this.activeSource = env.get('activeSource');
+
+		this.advBoxToggle =  env.get('advBoxToggle');
+
 		this.isCenter && setInterval(this.heartbeat.bind(this), 1000);
 		this.edgeNodes = [];
 	}
@@ -24,6 +27,20 @@ module.exports = class ManagerHandler
 		res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
 		res.header('Access-Control-Allow-Headers', 'Content-Type');
 		res.header('Access-Control-Allow-Origin', '*');
+
+		let reqCmd = req.url.split('/', 3).filter(e=>e.trim() != '');
+
+		if(reqCmd.length === 2) {
+			switch(reqCmd[1]) {
+				case "advtoggle":
+					console.log(this.sourcerInfos());
+					this.advBoxToggle();
+
+				break;
+				default:
+				break;
+			}
+		}
 		res.json(req.body);
 	}
 

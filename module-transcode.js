@@ -155,7 +155,8 @@ class PcmListener extends ChunksFromFFmpegBase
 
 class JpegsPcmFromWeb
 {
-	constructor( config, urlObj, mjpegCallback, pcmCallback, endCallback, errCallback ) 
+	constructor( config, urlObj, mjpegCallback, pcmCallback,
+		 endCallback, errCallback, pcmEndCallback, pcmErrCallback ) 
 	{
 		this.config = config;
 		this.oriUrl = urlObj.oriUrl;
@@ -166,18 +167,20 @@ class JpegsPcmFromWeb
 
 		this.endCallback = endCallback || this.onFFmepgEnd;
 		this.errCallback = errCallback || this.onError;
+		this.pcmEndCallback = pcmEndCallback || this.onFFmepgEnd;
+		this.pcmErrCallback = pcmErrCallback || this.onError;
 	}
 
 	start( callback ) 
 	{
 		this.videoCmd = new JpegsFromWebCamera(this.config, this.videoUrl, 
 			this.mjpegCallback, 
-			()=>{
-				this.endCallback();
+			(stdout, stderr)=>{
+				this.endCallback(stdout, stderr);
 				this.videoCmd.command=null;
 			},
-			(err)=>{
-				this.errCallback(err);
+			(err, stdout, stderr)=>{
+				this.errCallback(err, stdout, stderr);
 				this.videoCmd.command=null;
 			}
 		);
@@ -186,8 +189,14 @@ class JpegsPcmFromWeb
 		if ( this.audioUrl ) {
 			this.audioCmd = new PcmFromWeb( this.config, this.audioUrl, 
 				this.pcmCallback,
-				()=>{this.audioCmd.command=null},
-				(err)=>{this.audioCmd.command=null}
+				(stdout, stderr)=>{
+					this.pcmEndCallback(stdout, stderr);
+					this.audioCmd.command=null
+				},
+				(err, stdout, stderr)=>{
+					this.pcmErrCallback(err, stdout, stderr);
+					this.audioCmd.command=null
+				}
 			);
 			this.audioCmd.start(this.onFFmpegStart.bind(this.audioCmd));
 		}
@@ -233,9 +242,10 @@ class JpegsPcmFromFile extends JpegsFromFFmpegBase
 			let hasVideo = false;
 			let hasAudio = false;
 			let outputIsUsed = false;
-			let mapVideo = null;
-			let mapAudio = null;
+			let mapVideo = '-map 0:V:0';
+			let mapAudio = '-map 0:a:0';
 
+			/*
 			probeData.streams.forEach( (stream,index) => {
 				if ( stream.codec_type === 'video' ) {
 					mapVideo = mapVideo || '-map 0:'+index;
@@ -248,6 +258,7 @@ class JpegsPcmFromFile extends JpegsFromFFmpegBase
 					hasAudio = true;
 				}
 			});
+			*/
 
 			// handle input
 
@@ -750,12 +761,10 @@ class JpegsToLiveRtmp
 
 class LocalToLiveRtmp
 {
-	constructor( config, inputObj, endCallback ) 
+	constructor( config, endCallback ) 
 	{
 		this.config = config;
 		this.endCallback = endCallback;
-		this.input = inputObj.src;
-		this.inputOptions = inputObj.options;
 	}
 
 	onError( error, stdout, stderr ) 
@@ -780,20 +789,15 @@ class LocalToLiveRtmp
 		startCallback = startCallback || this.onStart.bind(this); 
 
 		this.command = ffmpeg();
-
-		this.command.input( this.input );
-		this.command.inputOptions( this.inputOptions );
-
-		this.config.outputs.forEach( (config) => {
-			if (config.active !== undefined) {
-				if (config.active !== true) {
-					return;
-				}
+		this.config.inputs.forEach((ipt) => {
+			if(ipt.active) {
+				this.command.input( ipt.src );
+				this.command.inputOptions( ipt.options );
 			}
+		})
 
-			this.command.output( config.outputTo );
-			this.command.outputOptions( config.options );
-		});
+		this.command.output( this.config.output.outputTo );
+		this.command.outputOptions( this.config.output.options );
 
 		this.command.on('start', startCallback )
 		this.command.on('error', this.onError.bind(this) );

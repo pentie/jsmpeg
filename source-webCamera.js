@@ -31,7 +31,7 @@ module.exports = class WebCameraSource
 
 		this.urgencyUrl = null;
 		this.onvifBox = new ScanOnvif( this.onvifConfig, (mjpegUrl)=>{
-			this.urgencyUrl = mjpgUrl;
+			this.urgencyUrl = mjpegUrl;
 		});
 
 		this.active = false;
@@ -336,6 +336,10 @@ module.exports = class WebCameraSource
 		};
 	}
 
+	advBoxToggle()
+	{
+		console.log(this.name, "advBox toggled, no effect on this source.");
+	}
 };
 
 
@@ -366,7 +370,7 @@ module.exports = class WebCameraSource
 					this.source && this.source.stop();
 					this.active && this.waitWebcamBackAgain( urlObj );
 
-					console.debug( 'JpegsPcmFromWeb end: ' , stderr );
+					console.debug( 'JpegsPcmFromWeb end: ' , stdout, stderr );
 				},
 				//errCallback
 				(err, stdout, stderr) => {
@@ -374,7 +378,7 @@ module.exports = class WebCameraSource
 					this.source && this.source.stop();
 					this.active && this.waitWebcamBackAgain( urlObj );
 
-					console.debug( 'JpegsPcmFromWeb err: ' , stderr );
+					console.debug( 'JpegsPcmFromWeb end: ' ,err, stdout, stderr );
 
 					if ( ! err) {return;}
 
@@ -387,6 +391,15 @@ module.exports = class WebCameraSource
 					} else {
 						console.log( err );
 					}
+				},
+				// pcmEnd
+				(stdout, stderr) => {
+					console.debug( 'JpegsPcmFromWeb end: ' , stdout, stderr );
+				},
+			
+				//pcmErr
+				(err, stdout, stderr) => {
+					console.debug( 'JpegsPcmFromWeb end: ' ,err, stdout, stderr );
 				});
 
 				this.source.start( (cmdline )=>{
