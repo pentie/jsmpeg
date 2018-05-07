@@ -242,9 +242,10 @@ class JpegsPcmFromFile extends JpegsFromFFmpegBase
 			let hasVideo = false;
 			let hasAudio = false;
 			let outputIsUsed = false;
-			let mapVideo = null;
-			let mapAudio = null;
+			let mapVideo = '-map 0:V:0';
+			let mapAudio = '-map 0:a:0';
 
+			/*
 			probeData.streams.forEach( (stream,index) => {
 				if ( stream.codec_type === 'video' ) {
 					mapVideo = mapVideo || '-map 0:'+index;
@@ -257,6 +258,7 @@ class JpegsPcmFromFile extends JpegsFromFFmpegBase
 					hasAudio = true;
 				}
 			});
+			*/
 
 			// handle input
 
