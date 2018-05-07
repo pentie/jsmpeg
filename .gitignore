@@ -1,6 +1,7 @@
 *.swp
 *.swo
 config.sh
+package-lock.json
 debug.js
 temp/
 \'

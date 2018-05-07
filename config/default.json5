@@ -4,8 +4,7 @@
 			caption: 'Local usb camera',
 			forceStart: true, // if true, when a camera plugin, it would be autoplay
 			// inputOptions: [],
-			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
-			size: '1280x720',
+			filter: ['scale=w=1280:h=720:force_original_aspect_ratio=1', 'pad=1280:720:(ow-iw)/2:(oh-ih)/2'],
 			src: [ '/dev/video0', '/dev/video1' ]
 		},
 
@@ -13,8 +12,7 @@
 			caption: 'Video from webcamera',
 			//inputOptions: ['-timeout 3800'],
 			//inputAudioOptions: ['-timeout 3800'],
-			filter: ['crop=iw:9/16*iw:0:(ih-oh)/2'],
-			size: '1280x720',
+			filter: ['scale=w=1280:h=720:force_original_aspect_ratio=1', 'pad=1280:720:(ow-iw)/2:(oh-ih)/2'],
 
 			//the retry interval in milliseconds, for camera url
 			retryTimeMs: 100, 
@@ -43,31 +41,31 @@
 		},
 
 		localMp4: {
+			debug: true,
 			caption: 'Local mp4 playlist',
 			// inputOptions: [],
-			filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
-			size: '1280x720',
+			filter: ['scale=w=1280:h=720:force_original_aspect_ratio=1', 'pad=1280:720:(ow-iw)/2:(oh-ih)/2'],
 			loop: 'yes',  // yes, no
 			order: 'random', // asc, desc, random
 			src: [  
-				'public/media/sub0', 
-				'public/media/sub1', 
-				'public/media/sub2',
+				'/home/and/Downloads/test',
+				//'public/media/sub0', 
+				//'public/media/sub1', 
+				//'public/media/sub2',
 				//'/home/and/Downloads/movies'
 			]
 		},
 	},
 
 	advertise: {
-		filter: ['pad=0:iw:(ow-iw)/2:(oh-ih)/2', 'crop=iw:9/16*iw:0:(ih-oh)/2'],
-		size: '1280x720',
+		filter: ['scale=w=1280:h=720:force_original_aspect_ratio=1', 'pad=1280:720:(ow-iw)/2:(oh-ih)/2'],
 		loop: 'yes',  // yes, no
 		order: 'random', // asc, desc, random
 		src: [ 'public/media' ]		
 	},
 
 	centerNodes: [{
-		active: false,
+		active: true,
 		port: 8080,
 		allowSources: ['localMp4'],
 		defaultSource: 'localMp4',
@@ -77,7 +75,7 @@
 		mjpegMaxUser: 200,
 		heartBeatInterval: 1000,
 	},{
-		active: true,
+		active: false,
 		port: 8081,
 		allowSources: ['webCamera'],
 		defaultSource: 'webCamera',
