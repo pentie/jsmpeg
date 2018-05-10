@@ -11,20 +11,26 @@ const EOI = new Buffer([0xff, 0xd9]);
 
 class MjpegStreamToJpegs
 {
-	constructor( jpegCallback ) 
+	constructor( config, jpegCallback ) 
 	{
 		if (!Buffer.prototype['indexOf']) bufferTools.extend();
 		this.jpegCallback = jpegCallback;
 		this._buffer = null;
+		this.config = config;
 	}
 
 	checkpoint( chunk ) 
 	{
+		if (this.config.enableMjpegScan === false) {
+			this.jpegCallback(chunk);
+			return;
+		}
+
 		let image = null;
 		let imgStart, imgEnd;
 		while (chunk) {
 			if (this._buffer === null) {
-				chunk = -1 != (imgStart = chunk.indexOf(SOI)) ? chunk.slice(imgStart) : null;
+				chunk = (-1 != (imgStart = chunk.indexOf(SOI))) ? chunk.slice(imgStart) : null;
 				if (chunk) this._buffer = new Buffer(0);
 				continue;
 			}
@@ -62,25 +68,43 @@ class ChunksFromFFmpegBase
 		mkdirp.sync('/tmp/jsmpeg');
 	}
 
+	log( title, ...msg ){
+		this.config.debug &&  console.log( title, ...msg );
+	}
+
 	onFFmpegStart( cmdline ) {
-		//console.log( this.constructor.name, cmdline);
+		this.log( this.constructor.name, cmdline);
 	}
 
 	onFFmepgEnd () {
-		console.log( this.constructor.name, ': ffmpeg processing finished !');
+		this.log( this.constructor.name, ': ffmpeg processing finished !');
 		this.command = null;
 	}
 
 	onError (err) {
-		console.log( this.constructor.name, 'error occurred: ' + err.message);
+		this.log( this.constructor.name, 'error occurred: ' + err.message);
 		if (this.constructor.name === 'JpegsFromMp4File') {
-			console.log(this.mp4File);
+			this.log(this.mp4File);
+		}
+		if (this.constructor.name === 'PcmListener') {
+			this.log(this.loopFile);
 		}
 		this.command = null;
 	}
 
 	stop() {
 		this.command && this.command.kill('SIGKILL');
+	}
+}
+
+class JpegsFromFFmpegBase extends ChunksFromFFmpegBase
+{
+	constructor( config, jpegsCallback ) 
+	{
+		let extractor = new MjpegStreamToJpegs( config, jpegsCallback );
+		super( config, function(chunk) {
+			extractor.checkpoint(chunk);
+		});
 	}
 }
 
@@ -131,7 +155,8 @@ class PcmListener extends ChunksFromFFmpegBase
 
 class JpegsPcmFromWeb
 {
-	constructor( config, urlObj, mjpegCallback, pcmCallback, endCallback, errCallback ) 
+	constructor( config, urlObj, mjpegCallback, pcmCallback,
+		 endCallback, errCallback, pcmEndCallback, pcmErrCallback ) 
 	{
 		this.config = config;
 		this.oriUrl = urlObj.oriUrl;
@@ -142,18 +167,20 @@ class JpegsPcmFromWeb
 
 		this.endCallback = endCallback || this.onFFmepgEnd;
 		this.errCallback = errCallback || this.onError;
+		this.pcmEndCallback = pcmEndCallback || this.onFFmepgEnd;
+		this.pcmErrCallback = pcmErrCallback || this.onError;
 	}
 
 	start( callback ) 
 	{
 		this.videoCmd = new JpegsFromWebCamera(this.config, this.videoUrl, 
 			this.mjpegCallback, 
-			()=>{
-				this.endCallback();
+			(stdout, stderr)=>{
+				this.endCallback(stdout, stderr);
 				this.videoCmd.command=null;
 			},
-			(err)=>{
-				this.errCallback(err);
+			(err, stdout, stderr)=>{
+				this.errCallback(err, stdout, stderr);
 				this.videoCmd.command=null;
 			}
 		);
@@ -162,8 +189,14 @@ class JpegsPcmFromWeb
 		if ( this.audioUrl ) {
 			this.audioCmd = new PcmFromWeb( this.config, this.audioUrl, 
 				this.pcmCallback,
-				()=>{this.audioCmd.command=null},
-				(err)=>{this.audioCmd.command=null}
+				(stdout, stderr)=>{
+					this.pcmEndCallback(stdout, stderr);
+					this.audioCmd.command=null
+				},
+				(err, stdout, stderr)=>{
+					this.pcmErrCallback(err, stdout, stderr);
+					this.audioCmd.command=null
+				}
 			);
 			this.audioCmd.start(this.onFFmpegStart.bind(this.audioCmd));
 		}
@@ -188,7 +221,7 @@ class JpegsPcmFromWeb
 	}
 }
 
-class JpegsPcmFromFile extends ChunksFromFFmpegBase
+class JpegsPcmFromFile extends JpegsFromFFmpegBase
 {
 	constructor( config, mediaFile, mjpegCallback, pcmCallback, endCallback ) 
 	{
@@ -209,13 +242,13 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 			let hasVideo = false;
 			let hasAudio = false;
 			let outputIsUsed = false;
+			let mapVideo = '-map 0:V:0';
+			let mapAudio = '-map 0:a:0';
 
-			probeData.streams.forEach( stream => {
+			probeData.streams.forEach( (stream,index) => {
 				if ( stream.codec_type === 'video' ) {
 					hasVideo = true;
-					return;
-				}
-				if ( stream.codec_type === 'audio' ) {
+				} else if ( stream.codec_type === 'audio' ) {
 					hasAudio = true;
 				}
 			});
@@ -231,21 +264,29 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 			// handle video output 
 			
 			if ( hasVideo ) {
-				let videoSize = this.config.size || '1280x720';
-				let videoFilters = this.config.filter || [
-					'pad=0:iw:(ow-iw)/2:(oh-ih)/2', 
-					'crop=iw:9/16*iw:0:(ih-oh)/2'
-				];
+				this.command.output( this.output );
+
 				let outputVideoOptions = this.config.outputVideoOptions || [ 
-					'-map 0:V:0',
+					mapVideo,
 					'-f mjpeg', 
 					'-c:v mjpeg'
 				];
+				this.command.outputOptions( outputVideoOptions );
 
-				this.command.output( this.output )
-					.outputOptions( outputVideoOptions )
-					.videoFilters( videoFilters )
-					.size( videoSize );
+				let filters = this.config.filter || [
+					'scale=w=1280:h=720:force_original_aspect_ratio=1', 
+					'pad=1280:720:(ow-iw)/2:(oh-ih)/2'
+				];
+
+				filters = [
+					'scale=w=1280:h=720:force_original_aspect_ratio=1', 
+					'pad=1280:720:(ow-iw)/2:(oh-ih)/2'
+				];
+
+
+				if (filters.length > 0) {
+					this.command.videoFilters( filters);
+				}
 
 				outputIsUsed = true;
 			}
@@ -254,8 +295,7 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 
 			if ( hasAudio ) {
 				if ( outputIsUsed ) {
-					this.pcmListen = new PcmListener(this.config, this.pcmCallback, 
-						this.onFFmepgEnd);
+					this.pcmListen = new PcmListener(this.config, this.pcmCallback);
 					let loopfifo = this.pcmListen.start();
 					this.command.output( loopfifo );
 				} else {
@@ -264,11 +304,14 @@ class JpegsPcmFromFile extends ChunksFromFFmpegBase
 				}
 
 				let outputAudioOptions = this.config.outputAudioOptions || [ 
-					'-map 0:a:0',
-					'-f s16le',
+					mapAudio,
+					'-f fifo',
+					'-fifo_format s16le',
+					'-drop_pkts_on_overflow 1',
 					'-c:a pcm_s16le',
 					'-ar 44100', '-ac 2', 
 					'-fflags nobuffer',
+					'-y'
 				];
 
 				this.command.outputOptions( outputAudioOptions );
@@ -336,7 +379,7 @@ class Mp3Listener extends ChunksFromFFmpegBase
 	}
 }
 
-class JpegsMp3FromFile extends ChunksFromFFmpegBase
+class JpegsMp3FromFile extends JpegsFromFFmpegBase
 {
 	constructor( config, mp4File, mjpegCallback, mp3Callback, endCallback ) 
 	{
@@ -349,7 +392,7 @@ class JpegsMp3FromFile extends ChunksFromFFmpegBase
 
 	start( callback ) 
 	{
-		this.mp3Listen = new Mp3Listener(this.config, this.mp3Callback, this.onFFmepgEnd);
+		this.mp3Listen = new Mp3Listener(this.config, this.mp3Callback, this.onFFmepgEnd.bind(this));
 		let loopfifo = this.mp3Listen.start();
 
 		let inputOptions = this.config.inputOptions || [];
@@ -368,11 +411,9 @@ class JpegsMp3FromFile extends ChunksFromFFmpegBase
 			'-c:v mjpeg'
 		];
 
-		let videoFilters = this.config.filter || [
+		let filters = this.config.filter || [
 			'crop=iw:9/16*iw:0:(ih-oh)/2'
 		];
-
-		let videoSize = this.config.size || '1280x720';
 
 		this.command = ffmpeg()
 			.input( this.mp4File )
@@ -380,8 +421,7 @@ class JpegsMp3FromFile extends ChunksFromFFmpegBase
 			.inputOptions( inputOptions )
 			.output( this.output )
 			.outputOptions( outputVideoOptions )
-			.videoFilters( videoFilters )
-			.size( videoSize )
+			.videoFilters( filters )
 			.output( loopfifo )
 			.outputOptions( outputAudioOptions )
 			.on('start', callback)
@@ -514,17 +554,6 @@ class PcmFromFile extends ChunksFromFFmpegBase
 
 
 
-class JpegsFromFFmpegBase extends ChunksFromFFmpegBase
-{
-	constructor( config, jpegsCallback ) 
-	{
-		let extractor = new MjpegStreamToJpegs( jpegsCallback );
-		super( config, function(chunk) {
-			extractor.checkpoint(chunk);
-		});
-	}
-}
-
 class JpegsFromMp4File extends JpegsFromFFmpegBase
 {
 	constructor( config, mp4File, jpegsCallback, endCallback ) 
@@ -547,7 +576,6 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 			.output( this.output )
 			.outputOptions([ '-f mjpeg', '-c:v mjpeg' ])
 			.videoFilters( this.config.filter )
-			.size( this.config.size )
 			.on('start', callback)
 			.on('error', this.errCallback)
 			.on('end', this.endCallback);
@@ -578,7 +606,6 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 			.output(this.output)
 			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
 			.videoFilters( this.config.filter )
-			.size( this.config.size )
 			.on('start', callback)
 			.on('error', this.errCallback)
 			.on('end', this.endCallback);
@@ -613,7 +640,6 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 			.output(this.output)
 			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
 			.videoFilters( this.config.filter )
-			.size( this.config.size )
 			.on('start', callback)
 			.on('error', this.errCallback)
 			.on('end', this.endCallback);

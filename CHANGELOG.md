@@ -1,3 +1,6 @@
+### Fix bugs (2018-04-28)
+* remove "size" option in config.json5, the video size will hard code in ffmpeg -filter:v parameter
+
 ### Fix bugs (2018-02-7)
 * fix bug of mjpeg stream in relayNode, previous will stop after switchVideoMode 
 

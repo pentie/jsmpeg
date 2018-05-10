@@ -69,6 +69,7 @@ function updateOnlineList( srcList, order, callback )
 {
 	let pathKeys = [];
 	let counter = 0;
+
 	srcList.forEach( mediaPath => {
 		pathKeys.push( resolve( mediaPath ));
 		counter++;
@@ -104,7 +105,7 @@ function updateOnlineList( srcList, order, callback )
 	{
 		let mediaFiles = dir.files( mediaPath, {sync:true, recursive:false});
 
-		let matchs = [/.mp4$/, /.rmvb$/, /.mkv$/];
+		let matchs = [/.mp4$/ig, /.rmvb$/ig, /.mkv$/ig];
 		let isMediaFile = function(filename) {
 			return matchs.some( regex => {
 				return regex.test( filename );
