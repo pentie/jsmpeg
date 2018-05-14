@@ -1,3 +1,9 @@
+let log4js = require('log4js');
+log4js.configure({
+  appenders: { out: { type: 'stdout' } },
+  categories: { default: { appenders: [ 'out' ], level: 'debug' } }
+});
+const logger = log4js.getLogger();
 
 const resolve = require('path').resolve;
 const dir = require('node-dir');
@@ -14,7 +20,7 @@ class Feed2RtmpPush
 	constructor( livestreamConfig ) 
 	{
 		this.config = livestreamConfig;
-		console.debug("config:", this.config)
+		logger.debug("config:", this.config)
 
 		this.defaultCmdObj = { };
 	}
@@ -38,12 +44,11 @@ class Feed2RtmpPush
 		this.active = true;
 		this.source = new LocalToLiveRtmp( this.config,
 			(err, sout, serr)=>{
-				console.log("live retryMs: "+this.config.retryMs);
+				logger.log("live retryMs: "+this.config.retryMs);
 				setTimeout( ()=>{
 					cmdObj.internalCall = true;
 					this.active && this.start( cmdObj );
 				}, this.config.retryMs);
-			// console.log('in start callback')
 			}).start( callback );
 	}
 
@@ -67,5 +72,5 @@ class Feed2RtmpPush
 (function () {
 	const config = allConfigs.get('livestreams')[0];
 	let src = new Feed2RtmpPush(config);
-	src.start((cmdline)=> { console.log(`startd: ${cmdline}`); })
+	src.start((cmdline)=> { logger.info(`startd: ${cmdline}`); })
 })();

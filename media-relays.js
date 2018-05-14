@@ -1,3 +1,12 @@
+let log4js = require('log4js');
+log4js.configure({
+  appenders: { out: { type: 'stdout' } },
+  categories: { default: { appenders: [ 'out' ], level: 'debug' } }
+});
+const logger = log4js.getLogger('con');
+console.log = logger.info.bind(logger);
+console.debug = logger.debug.bind(logger);
+
 const argv = require('minimist')(process.argv.slice(2));
 const WebSocketHub = require('./container-wsocket.js'); 
 
