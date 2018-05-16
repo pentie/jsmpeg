@@ -269,7 +269,8 @@ class JpegsPcmFromFile extends JpegsFromFFmpegBase
 				let outputVideoOptions = this.config.outputVideoOptions || [ 
 					'-map 0:V:0',
 					'-f mjpeg', 
-					'-c:v mjpeg'
+					'-c:v mjpeg',
+					'-qscale:v 5'
 				];
 				this.command.outputOptions( outputVideoOptions );
 
@@ -571,7 +572,7 @@ class JpegsFromMp4File extends JpegsFromFFmpegBase
 			.native()
 			.inputOptions( inputOptions )
 			.output( this.output )
-			.outputOptions([ '-f mjpeg', '-c:v mjpeg' ])
+			.outputOptions([ '-f mjpeg', '-c:v mjpeg', '-qscale:v 5' ])
 			.videoFilters( this.config.filter )
 			.on('start', callback)
 			.on('error', this.errCallback)
@@ -601,7 +602,7 @@ class JpegsFromWebCamera extends JpegsFromFFmpegBase
 			.input(this.url)
 			.inputOptions( inputOptions )
 			.output(this.output)
-			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
+			.outputOptions(['-f mjpeg', '-c:v mjpeg', '-qscale:v 5'])
 			.videoFilters( this.config.filter )
 			.on('start', callback)
 			.on('error', this.errCallback)
@@ -635,7 +636,7 @@ class JpegsFromUsbCamera extends JpegsFromFFmpegBase
 			.input(this.devPath)
 			.inputOptions( inputOptions )
 			.output(this.output)
-			.outputOptions(['-f mjpeg', '-c:v mjpeg'])
+			.outputOptions(['-f mjpeg', '-c:v mjpeg', '-qscale:v 5'])
 			.videoFilters( this.config.filter )
 			.on('start', callback)
 			.on('error', this.errCallback)
