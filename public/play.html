@@ -80,16 +80,18 @@ var intwsurl = "";
 		$(document).on('jsmpeg:reports', function(evn) {
 			var reports = evn.detail;
 			var ctl = $("#channel_ctl");
-			var upstreams = reports.nodes[ reports.nodes.length - 1 ].upstreams; 
-			if(upstreams.length != ctl.length ) {
-				ctl.empty();
-				$.each(upstreams, function(_, stm) {
-					var btn = $("<button>").addClass("btn btn-info")
-					.text(stm.caption)
-					.attr('data-stmname', stm.name)
-					.appendTo("#channel_ctl");
-					if(stm.active) { btn.addClass("btn_clicked") }
-				});
+			if(reports.nodes.length > 1) {
+				var upstreams = reports.nodes[ reports.nodes.length - 1 ].upstreams; 
+				if(upstreams.length != ctl.length ) {
+					ctl.empty();
+					$.each(upstreams, function(_, stm) {
+						var btn = $("<button>").addClass("btn btn-info")
+						.text(stm.caption)
+						.attr('data-stmname', stm.name)
+						.appendTo("#channel_ctl");
+						if(stm.active) { btn.addClass("btn_clicked") }
+					});
+				}
 			}
 
 			$("#debug > p.mpeg1").text(JSMpeg.infos.mpeg1Time.join(","));
