@@ -49,6 +49,10 @@ module.exports = class UsbCameraSource
 
 	onCaptureInsert( devPath )
 	{
+		if(!devPath || devPath.indexOf( 'video' ) === -1) {
+			console.log("usb device not camera, event pass.")
+			return;
+		}
 		console.log( 'camera added:', devPath );
 		if (this.config.src.indexOf( devPath ) === -1) {
 			this.config.src.push( devPath );
@@ -84,6 +88,10 @@ module.exports = class UsbCameraSource
 
 	onCaptureRemove( devPath )
 	{
+		if(!devPath || devPath.indexOf( 'video' ) === -1) {
+			console.log("usb device not camera, event pass.")
+			return;
+		}
 		console.log( 'camera remove:', devPath );
 		if (this.isRunning) {
 			return;
